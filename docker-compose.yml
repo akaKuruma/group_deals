@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:18-alpine
+    container_name: group_deals_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - 5432:5432
+    volumes:
+      - group_deals_postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - group_deals_network
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: group_deals_phoenix_app
+    ports:
+      - 80:4000
+    environment:
+      MIX_ENV: prod
+      PHX_SERVER: true
+      PORT: 4000
+      DATABASE_URL: ecto://postgres:postgres@db:5432/group_deals_prod
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - group_deals_network
+
+volumes:
+  group_deals_postgres_data:
+    external: true
+  group_deals_data:
+    external: true
+
+networks:
+  group_deals_network:

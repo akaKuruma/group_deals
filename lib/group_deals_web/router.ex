@@ -17,6 +17,11 @@ defmodule GroupDealsWeb.Router do
   scope "/", GroupDealsWeb do
     pipe_through :browser
 
+    live "/gap/pages_groups", PagesGroupLive.Index, :index
+    live "/gap/pages_groups/new", PagesGroupLive.Form, :new
+    live "/gap/pages_groups/:id", PagesGroupLive.Show, :show
+    live "/gap/pages_groups/:id/edit", PagesGroupLive.Form, :edit
+
     get "/", PageController, :home
   end
 

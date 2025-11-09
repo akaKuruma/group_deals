@@ -38,3 +38,5 @@ npm-debug.log
 # .env file
 .env
 
+# tmp files
+tmp/

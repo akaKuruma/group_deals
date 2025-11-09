@@ -1,4 +1,5 @@
 import Config
+config :group_deals, Oban, testing: :manual
 
 # Configure your database
 #

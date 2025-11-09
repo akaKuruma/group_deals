@@ -7,6 +7,12 @@
 # General application configuration
 import Config
 
+config :group_deals, Oban,
+  engine: Oban.Engines.Basic,
+  notifier: Oban.Notifiers.Postgres,
+  queues: [default: 10],
+  repo: GroupDeals.Repo
+
 config :group_deals,
   ecto_repos: [GroupDeals.Repo],
   generators: [timestamp_type: :utc_datetime, binary_id: true]

@@ -11,6 +11,7 @@ defmodule GroupDeals.Application do
       GroupDealsWeb.Telemetry,
       GroupDeals.Repo,
       {DNSCluster, query: Application.get_env(:group_deals, :dns_cluster_query) || :ignore},
+      {Oban, Application.fetch_env!(:group_deals, Oban)},
       {Phoenix.PubSub, name: GroupDeals.PubSub},
       # Start a worker by calling: GroupDeals.Worker.start_link(arg)
       # {GroupDeals.Worker, arg},

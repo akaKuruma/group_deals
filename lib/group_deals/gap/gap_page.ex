@@ -30,10 +30,25 @@ defmodule GroupDeals.Gap.GapPage do
   @doc false
   def changeset(gap_page, attrs) do
     gap_page
-    |> cast(attrs, [:title, :web_page_url, :api_url, :web_page_parameters, :pages_group_id])
+    |> cast(attrs, [:title, :web_page_url, :api_url, :pages_group_id])
     |> validate_required([:title, :web_page_url, :api_url, :pages_group_id])
     |> validate_length(:title, max: 255)
     |> unique_constraint(:title, name: :gap_pages_group_id_title_index, message: "Title must be unique for this pages group")
     |> foreign_key_constraint(:pages_group_id)
+    |> extract_web_page_parameters()
   end
+
+  defp extract_web_page_parameters(changeset) do
+    case changeset do
+      %Ecto.Changeset{changes: %{web_page_url: web_page_url}} ->
+        %{query: query, fragment: fragment} = web_page_url |> URI.parse()
+        params = %{} |> decode_and_merge(query) |> decode_and_merge(fragment)
+        put_change(changeset, :web_page_parameters, params)
+      _ ->
+        changeset
+    end
+  end
+
+  defp decode_and_merge(params, segment) when is_nil(segment), do: params
+  defp decode_and_merge(params, segment), do: params |> Map.merge(URI.decode_query(segment))
 end

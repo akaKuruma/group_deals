@@ -34,10 +34,12 @@ defmodule GroupDeals.Release do
 
     for repo <- repos() do
       seed_script = Application.app_dir(@app, "priv/repo/seeds.exs")
+
       if File.exists?(seed_script) do
-        {:ok, _, _} = Ecto.Migrator.with_repo(repo, fn _repo ->
-          Code.eval_file(seed_script)
-        end)
+        {:ok, _, _} =
+          Ecto.Migrator.with_repo(repo, fn _repo ->
+            Code.eval_file(seed_script)
+          end)
       end
     end
   end

@@ -19,14 +19,22 @@ defmodule GroupDealsWeb.GapPageLive.Index do
       <.table
         id="gap_pages"
         rows={@streams.gap_pages}
-        row_click={fn {_id, gap_page} -> JS.navigate(~p"/gap/pages_groups/#{@pages_group_id}/gap_pages/#{gap_page}") end}
+        row_click={
+          fn {_id, gap_page} ->
+            JS.navigate(~p"/gap/pages_groups/#{@pages_group_id}/gap_pages/#{gap_page}")
+          end
+        }
       >
         <:col :let={{_id, gap_page}} label="Title">{gap_page.title}</:col>
         <:action :let={{_id, gap_page}}>
           <div class="sr-only">
-            <.link navigate={~p"/gap/pages_groups/#{@pages_group_id}/gap_pages/#{gap_page}"}>Show</.link>
+            <.link navigate={~p"/gap/pages_groups/#{@pages_group_id}/gap_pages/#{gap_page}"}>
+              Show
+            </.link>
           </div>
-          <.link navigate={~p"/gap/pages_groups/#{@pages_group_id}/gap_pages/#{gap_page}/edit"}>Edit</.link>
+          <.link navigate={~p"/gap/pages_groups/#{@pages_group_id}/gap_pages/#{gap_page}/edit"}>
+            Edit
+          </.link>
         </:action>
         <:action :let={{id, gap_page}}>
           <.link

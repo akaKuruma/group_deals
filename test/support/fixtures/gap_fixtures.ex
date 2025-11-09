@@ -23,7 +23,8 @@ defmodule GroupDeals.GapFixtures do
   Generate a gap_page.
   """
   def gap_page_fixture(attrs \\ %{}) do
-    {:ok, gap_page} = Gap.create_gap_page(handle_pages_group_field(attrs), handle_page_attrs(attrs))
+    {:ok, gap_page} =
+      Gap.create_gap_page(handle_pages_group_field(attrs), handle_page_attrs(attrs))
 
     gap_page
   end

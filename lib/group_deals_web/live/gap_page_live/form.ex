@@ -74,7 +74,9 @@ defmodule GroupDealsWeb.GapPageLive.Form do
         {:noreply,
          socket
          |> put_flash(:info, "Gap page updated successfully")
-         |> push_navigate(to: return_path(socket.assigns.return_to, socket.assigns.pages_group.id, gap_page))}
+         |> push_navigate(
+           to: return_path(socket.assigns.return_to, socket.assigns.pages_group.id, gap_page)
+         )}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, form: to_form(changeset))}
@@ -87,14 +89,21 @@ defmodule GroupDealsWeb.GapPageLive.Form do
         {:noreply,
          socket
          |> put_flash(:info, "Gap page created successfully")
-         |> push_navigate(to: return_path(socket.assigns.return_to, socket.assigns.pages_group.id, gap_page))}
+         |> push_navigate(
+           to: return_path(socket.assigns.return_to, socket.assigns.pages_group.id, gap_page)
+         )}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, form: to_form(changeset))}
     end
   end
 
-  defp return_path("index", pages_group_id, _gap_page), do: ~p"/gap/pages_groups/#{pages_group_id}/gap_pages"
-  defp return_path("show", pages_group_id, gap_page), do: ~p"/gap/pages_groups/#{pages_group_id}/gap_pages/#{gap_page}"
-  defp return_path("edit", pages_group_id, gap_page), do: ~p"/gap/pages_groups/#{pages_group_id}/gap_pages/#{gap_page}/edit"
+  defp return_path("index", pages_group_id, _gap_page),
+    do: ~p"/gap/pages_groups/#{pages_group_id}/gap_pages"
+
+  defp return_path("show", pages_group_id, gap_page),
+    do: ~p"/gap/pages_groups/#{pages_group_id}/gap_pages/#{gap_page}"
+
+  defp return_path("edit", pages_group_id, gap_page),
+    do: ~p"/gap/pages_groups/#{pages_group_id}/gap_pages/#{gap_page}/edit"
 end

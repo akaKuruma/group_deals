@@ -14,7 +14,7 @@ defmodule GroupDeals.Gap.ApiUrlBuilder do
     "brand" => "gapfs",
     "locale" => "en_US",
     "market" => "us",
-    "pageNumber" => "0",
+    "pageNumber" => "0"
   }
 
   def build_api_url(%Ecto.Changeset{data: %GapPage{}} = gap_page_changeset) do
@@ -24,6 +24,7 @@ defmodule GroupDeals.Gap.ApiUrlBuilder do
         |> extract_web_page_parameters()
         |> add_default_parameters()
         |> build_api_url_from_params()
+
       _ ->
         gap_page_changeset
     end
@@ -35,6 +36,7 @@ defmodule GroupDeals.Gap.ApiUrlBuilder do
         %{}
         |> extract_cid(url_params)
         |> extract_department(url_params)
+
       _ ->
         %{}
     end

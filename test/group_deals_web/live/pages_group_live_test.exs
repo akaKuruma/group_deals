@@ -78,7 +78,10 @@ defmodule GroupDealsWeb.PagesGroupLiveTest do
     test "deletes pages_group in listing", %{conn: conn, pages_group: pages_group} do
       {:ok, index_live, _html} = live(conn, ~p"/gap/pages_groups")
 
-      assert index_live |> element("#pages_groups-#{pages_group.id} a", "Delete") |> render_click()
+      assert index_live
+             |> element("#pages_groups-#{pages_group.id} a", "Delete")
+             |> render_click()
+
       refute has_element?(index_live, "#pages_groups-#{pages_group.id}")
     end
   end

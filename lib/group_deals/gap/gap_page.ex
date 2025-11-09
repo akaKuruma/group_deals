@@ -6,15 +6,15 @@ defmodule GroupDeals.Gap.GapPage do
   alias Ecto.Changeset
 
   @type t :: %__MODULE__{
-    id: binary,
-    title: String.t(),
-    web_page_url: String.t(),
-    api_url: String.t(),
-    web_page_parameters: Map.t(),
-    pages_group: PagesGroup.t(),
-    inserted_at: DateTime.t(),
-    updated_at: DateTime.t()
-  }
+          id: binary,
+          title: String.t(),
+          web_page_url: String.t(),
+          api_url: String.t(),
+          web_page_parameters: map,
+          pages_group: PagesGroup.t(),
+          inserted_at: DateTime.t(),
+          updated_at: DateTime.t()
+        }
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -35,7 +35,10 @@ defmodule GroupDeals.Gap.GapPage do
     |> cast(attrs, [:title, :web_page_url, :pages_group_id])
     |> validate_required([:title, :web_page_url, :pages_group_id])
     |> validate_length(:title, max: 255)
-    |> unique_constraint(:title, name: :gap_pages_group_id_title_index, message: "Title must be unique for this pages group")
+    |> unique_constraint(:title,
+      name: :gap_pages_group_id_title_index,
+      message: "Title must be unique for this pages group"
+    )
     |> foreign_key_constraint(:pages_group_id)
     |> extract_web_page_parameters()
   end
@@ -51,6 +54,7 @@ defmodule GroupDeals.Gap.GapPage do
         %{query: query, fragment: fragment} = web_page_url |> URI.parse()
         params = %{} |> decode_and_merge(query) |> decode_and_merge(fragment)
         put_change(changeset, :web_page_parameters, params)
+
       _ ->
         changeset
     end

@@ -13,6 +13,8 @@ defmodule GroupDeals.Repo.Migrations.CreateGapPages do
       timestamps(type: :utc_datetime)
     end
 
-    create unique_index(:gap_pages, [:pages_group_id, :title], name: :gap_pages_group_id_title_index)
+    create unique_index(:gap_pages, [:pages_group_id, :title],
+             name: :gap_pages_group_id_title_index
+           )
   end
 end

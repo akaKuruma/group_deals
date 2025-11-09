@@ -3,6 +3,14 @@ defmodule GroupDeals.Gap.PagesGroup do
   import Ecto.Changeset
   alias GroupDeals.Gap.GapPage
 
+  @type t :: %__MODULE__{
+          id: binary,
+          title: String.t(),
+          gap_pages: list(GapPage.t()),
+          inserted_at: DateTime.t(),
+          updated_at: DateTime.t()
+        }
+
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "pages_groups" do

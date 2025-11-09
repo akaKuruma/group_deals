@@ -29,14 +29,14 @@ defmodule GroupDealsWeb.GapPageLiveTest do
     setup [:create_gap_page]
 
     test "lists all gap_pages", %{conn: conn, gap_page: gap_page} do
-      {:ok, _index_live, html} = live(conn, ~p"/gap/pages_groups/#{gap_page.pages_group_id}/gap_pages")
+      {:ok, _index_live, html} =
+        live(conn, ~p"/gap/pages_groups/#{gap_page.pages_group_id}/gap_pages")
 
       assert html =~ "Listing Gap pages"
       assert html =~ gap_page.title
     end
 
     test "saves new gap_page", %{conn: conn, pages_group_id: pages_group_id} do
-
       {:ok, index_live, _html} = live(conn, ~p"/gap/pages_groups/#{pages_group_id}/gap_pages")
 
       assert {:ok, form_live, _} =
@@ -63,13 +63,17 @@ defmodule GroupDealsWeb.GapPageLiveTest do
     end
 
     test "updates gap_page in listing", %{conn: conn, gap_page: gap_page} do
-      {:ok, index_live, _html} = live(conn, ~p"/gap/pages_groups/#{gap_page.pages_group_id}/gap_pages")
+      {:ok, index_live, _html} =
+        live(conn, ~p"/gap/pages_groups/#{gap_page.pages_group_id}/gap_pages")
 
       assert {:ok, form_live, _html} =
                index_live
                |> element("#gap_pages-#{gap_page.id} a", "Edit")
                |> render_click()
-               |> follow_redirect(conn, ~p"/gap/pages_groups/#{gap_page.pages_group_id}/gap_pages/#{gap_page}/edit")
+               |> follow_redirect(
+                 conn,
+                 ~p"/gap/pages_groups/#{gap_page.pages_group_id}/gap_pages/#{gap_page}/edit"
+               )
 
       assert render(form_live) =~ "Edit Gap page"
 
@@ -81,7 +85,10 @@ defmodule GroupDealsWeb.GapPageLiveTest do
                form_live
                |> form("#gap_page-form", gap_page: @update_attrs)
                |> render_submit()
-               |> follow_redirect(conn, ~p"/gap/pages_groups/#{gap_page.pages_group_id}/gap_pages")
+               |> follow_redirect(
+                 conn,
+                 ~p"/gap/pages_groups/#{gap_page.pages_group_id}/gap_pages"
+               )
 
       html = render(index_live)
       assert html =~ "Gap page updated successfully"
@@ -89,7 +96,8 @@ defmodule GroupDealsWeb.GapPageLiveTest do
     end
 
     test "deletes gap_page in listing", %{conn: conn, gap_page: gap_page} do
-      {:ok, index_live, _html} = live(conn, ~p"/gap/pages_groups/#{gap_page.pages_group_id}/gap_pages")
+      {:ok, index_live, _html} =
+        live(conn, ~p"/gap/pages_groups/#{gap_page.pages_group_id}/gap_pages")
 
       assert index_live |> element("#gap_pages-#{gap_page.id} a", "Delete") |> render_click()
       refute has_element?(index_live, "#gap_pages-#{gap_page.id}")
@@ -100,20 +108,25 @@ defmodule GroupDealsWeb.GapPageLiveTest do
     setup [:create_gap_page]
 
     test "displays gap_page", %{conn: conn, gap_page: gap_page} do
-      {:ok, _show_live, html} = live(conn, ~p"/gap/pages_groups/#{gap_page.pages_group_id}/gap_pages/#{gap_page}")
+      {:ok, _show_live, html} =
+        live(conn, ~p"/gap/pages_groups/#{gap_page.pages_group_id}/gap_pages/#{gap_page}")
 
       assert html =~ "Show Gap page"
       assert html =~ gap_page.web_page_url
     end
 
     test "updates gap_page and returns to show", %{conn: conn, gap_page: gap_page} do
-      {:ok, show_live, _html} = live(conn, ~p"/gap/pages_groups/#{gap_page.pages_group_id}/gap_pages/#{gap_page}")
+      {:ok, show_live, _html} =
+        live(conn, ~p"/gap/pages_groups/#{gap_page.pages_group_id}/gap_pages/#{gap_page}")
 
       assert {:ok, form_live, _} =
                show_live
                |> element("a", "Edit")
                |> render_click()
-               |> follow_redirect(conn, ~p"/gap/pages_groups/#{gap_page.pages_group_id}/gap_pages/#{gap_page}/edit?return_to=show")
+               |> follow_redirect(
+                 conn,
+                 ~p"/gap/pages_groups/#{gap_page.pages_group_id}/gap_pages/#{gap_page}/edit?return_to=show"
+               )
 
       assert render(form_live) =~ "Edit Gap page"
 
@@ -125,12 +138,18 @@ defmodule GroupDealsWeb.GapPageLiveTest do
                form_live
                |> form("#gap_page-form", gap_page: @update_attrs)
                |> render_submit()
-               |> follow_redirect(conn, ~p"/gap/pages_groups/#{gap_page.pages_group_id}/gap_pages/#{gap_page}")
+               |> follow_redirect(
+                 conn,
+                 ~p"/gap/pages_groups/#{gap_page.pages_group_id}/gap_pages/#{gap_page}"
+               )
 
       html = render(show_live)
       assert html =~ "Gap page updated successfully"
       assert html =~ "Page Updated Title"
-      assert html =~ "https://api.gapfactory.com/commerce/search/products/v2/cc?brand=gapfs&amp;client_id=0&amp;enableDynamicPhoto=true&amp;ignoreInventory=false&amp;includeMarketingFlagsDetails=true&amp;locale=en_US&amp;market=us&amp;pageNumber=0&amp;pageSize=200&amp;session_id=0&amp;vendor=constructorio"
+
+      assert html =~
+               "https://api.gapfactory.com/commerce/search/products/v2/cc?brand=gapfs&amp;client_id=0&amp;enableDynamicPhoto=true&amp;ignoreInventory=false&amp;includeMarketingFlagsDetails=true&amp;locale=en_US&amp;market=us&amp;pageNumber=0&amp;pageSize=200&amp;session_id=0&amp;vendor=constructorio"
+
       assert html =~ "https://www.gap.com/bruzinha/updated-logo"
     end
   end

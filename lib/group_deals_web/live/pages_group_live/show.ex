@@ -14,7 +14,10 @@ defmodule GroupDealsWeb.PagesGroupLive.Show do
           <.button navigate={~p"/gap/pages_groups"}>
             <.icon name="hero-arrow-left" />
           </.button>
-          <.button variant="primary" navigate={~p"/gap/pages_groups/#{@pages_group}/edit?return_to=show"}>
+          <.button
+            variant="primary"
+            navigate={~p"/gap/pages_groups/#{@pages_group}/edit?return_to=show"}
+          >
             <.icon name="hero-pencil-square" /> Edit pages_group
           </.button>
         </:actions>

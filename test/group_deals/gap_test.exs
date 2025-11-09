@@ -35,7 +35,9 @@ defmodule GroupDeals.GapTest do
       pages_group = pages_group_fixture()
       update_attrs = %{title: "some updated title"}
 
-      assert {:ok, %PagesGroup{} = pages_group} = Gap.update_pages_group(pages_group, update_attrs)
+      assert {:ok, %PagesGroup{} = pages_group} =
+               Gap.update_pages_group(pages_group, update_attrs)
+
       assert pages_group.title == "some updated title"
     end
 
@@ -62,7 +64,12 @@ defmodule GroupDeals.GapTest do
 
     import GroupDeals.GapFixtures
 
-    @invalid_attrs %{api_url: nil, web_page_url: nil, web_page_parameters: nil, pages_group_id: nil}
+    @invalid_attrs %{
+      api_url: nil,
+      web_page_url: nil,
+      web_page_parameters: nil,
+      pages_group_id: nil
+    }
 
     test "list_gap_pages/0 returns all gap_pages" do
       gap_page = gap_page_fixture()
@@ -76,7 +83,13 @@ defmodule GroupDeals.GapTest do
 
     test "create_gap_page/1 with valid data creates a gap_page" do
       pages_group = pages_group_fixture()
-      valid_attrs = %{title: "some title", api_url: "some api_url", web_page_url: "some web_page_url", web_page_parameters: %{}}
+
+      valid_attrs = %{
+        title: "some title",
+        api_url: "some api_url",
+        web_page_url: "some web_page_url",
+        web_page_parameters: %{}
+      }
 
       assert {:ok, %GapPage{} = gap_page} = Gap.create_gap_page(pages_group, valid_attrs)
       assert gap_page.title == "some title"
@@ -93,7 +106,12 @@ defmodule GroupDeals.GapTest do
 
     test "update_gap_page/2 with valid data updates the gap_page" do
       gap_page = gap_page_fixture()
-      update_attrs = %{api_url: "some updated api_url", web_page_url: "some updated web_page_url", web_page_parameters: %{}}
+
+      update_attrs = %{
+        api_url: "some updated api_url",
+        web_page_url: "some updated web_page_url",
+        web_page_parameters: %{}
+      }
 
       assert {:ok, %GapPage{} = gap_page} = Gap.update_gap_page(gap_page, update_attrs)
       refute is_nil(gap_page.api_url)

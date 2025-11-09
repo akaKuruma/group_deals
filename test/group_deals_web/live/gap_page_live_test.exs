@@ -6,17 +6,19 @@ defmodule GroupDealsWeb.GapPageLiveTest do
 
   @create_attrs %{
     title: "Page New Title",
-    api_url: "https://www.gap.com/api/v1/products/bruzinha/logo",
     web_page_url: "https://www.gap.com/bruzinha/logo"
   }
 
   @update_attrs %{
     title: "Page Updated Title",
-    api_url: "https://www.gap.com/api/v1/products/bruzinha/updated-logo",
     web_page_url: "https://www.gap.com/bruzinha/updated-logo"
   }
 
-  @invalid_attrs %{api_url: nil, web_page_url: nil, title: nil}
+  @invalid_attrs %{
+    web_page_url: nil,
+    title: nil
+  }
+
   defp create_gap_page(_) do
     gap_page = gap_page_fixture()
 
@@ -128,7 +130,7 @@ defmodule GroupDealsWeb.GapPageLiveTest do
       html = render(show_live)
       assert html =~ "Gap page updated successfully"
       assert html =~ "Page Updated Title"
-      assert html =~ "https://www.gap.com/api/v1/products/bruzinha/updated-logo"
+      assert html =~ "https://api.gapfactory.com/commerce/search/products/v2/cc?brand=gapfs&amp;client_id=0&amp;enableDynamicPhoto=true&amp;ignoreInventory=false&amp;includeMarketingFlagsDetails=true&amp;locale=en_US&amp;market=us&amp;pageNumber=0&amp;pageSize=200&amp;session_id=0&amp;vendor=constructorio"
       assert html =~ "https://www.gap.com/bruzinha/updated-logo"
     end
   end

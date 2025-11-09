@@ -80,10 +80,10 @@ defmodule GroupDeals.GapTest do
 
       assert {:ok, %GapPage{} = gap_page} = Gap.create_gap_page(pages_group, valid_attrs)
       assert gap_page.title == "some title"
-      assert gap_page.api_url == "some api_url"
       assert gap_page.web_page_url == "some web_page_url"
       assert gap_page.web_page_parameters == %{}
       assert gap_page.pages_group_id == pages_group.id
+      refute is_nil(gap_page.api_url)
     end
 
     test "create_gap_page/1 with invalid data returns error changeset" do
@@ -96,7 +96,7 @@ defmodule GroupDeals.GapTest do
       update_attrs = %{api_url: "some updated api_url", web_page_url: "some updated web_page_url", web_page_parameters: %{}}
 
       assert {:ok, %GapPage{} = gap_page} = Gap.update_gap_page(gap_page, update_attrs)
-      assert gap_page.api_url == "some updated api_url"
+      refute is_nil(gap_page.api_url)
       assert gap_page.web_page_url == "some updated web_page_url"
       assert gap_page.web_page_parameters == %{}
       assert gap_page.pages_group_id == gap_page.pages_group_id

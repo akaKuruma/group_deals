@@ -162,6 +162,7 @@ defmodule GroupDeals.Gap do
     %GapPage{}
     |> Map.put(:pages_group_id, pages_group.id)
     |> GapPage.changeset(attrs)
+    |> GapPage.changeset_build_api_url()
     |> Repo.insert()
   end
 

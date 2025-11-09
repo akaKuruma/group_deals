@@ -16,7 +16,6 @@ defmodule GroupDealsWeb.GapPageLive.Form do
       <.form for={@form} id="gap_page-form" phx-change="validate" phx-submit="save">
         <.input field={@form[:title]} type="text" label="Title" />
         <.input field={@form[:web_page_url]} type="text" label="Web page url" />
-        <.input field={@form[:api_url]} type="text" label="Api url" />
 
         <footer>
           <.button phx-disable-with="Saving..." variant="primary">Save Gap page</.button>

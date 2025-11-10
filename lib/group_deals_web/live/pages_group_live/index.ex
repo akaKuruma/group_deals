@@ -28,6 +28,13 @@ defmodule GroupDealsWeb.PagesGroupLive.Index do
           </div>
           <.link navigate={~p"/gap/pages_groups/#{pages_group}/edit"}>Edit</.link>
         </:action>
+
+        <:action :let={{_id, pages_group}}>
+          <.link navigate={~p"/gap/pages_groups/#{pages_group.id}/gap_pages"}>
+            Gap Pages
+          </.link>
+        </:action>
+
         <:action :let={{id, pages_group}}>
           <.link
             phx-click={JS.push("delete", value: %{id: pages_group.id}) |> hide("##{id}")}

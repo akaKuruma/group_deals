@@ -1,6 +1,8 @@
 defmodule GroupDealsWeb.Router do
   use GroupDealsWeb, :router
 
+  import Oban.Web.Router
+
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
@@ -28,6 +30,9 @@ defmodule GroupDealsWeb.Router do
     live "/gap/pages_groups/:pages_group_id/gap_pages/new", GapPageLive.Form, :new
     live "/gap/pages_groups/:pages_group_id/gap_pages/:id", GapPageLive.Show, :show
     live "/gap/pages_groups/:pages_group_id/gap_pages/:id/edit", GapPageLive.Form, :edit
+
+    # Oban Web dashboard - SHOULD REQUIRE AUTHENTICATION
+    oban_dashboard("/oban")
 
     get "/", PageController, :home
   end

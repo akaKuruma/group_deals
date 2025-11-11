@@ -44,15 +44,32 @@ FetchWorkflowCoordinator (manages the entire workflow)
    - status: :fetching_product_list
    - started_at: current timestamp
 3. For each GapPage in PagesGroup (process sequentially, one HTTP request at a time):
-   - Call Gap API (api_url) using Req library
+   - Consider 3 retries in case of fail (ref: '3_scrape_links_plus_info2_AUGUST.py' script file);
+   - Use random sleep times (ref: '3_scrape_links_plus_info2_AUGUST.py' script file);
+   - Call Gap API (api_url):
+      - using Req library
+      - including these headers (ref: '3_scrape_links_plus_info2_AUGUST.py' script file):
+         ```
+         {
+          'User-Agent': (
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+              'AppleWebKit/537.36 (KHTML, like Gecko) '
+              'Chrome/91.0.4472.124 Safari/537.36'
+          ),
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Connection': 'keep-alive',
+          'Referer': 'https://www.gapfactory.com/'
+         }
+         ```
    - Handle response:
      - **If error:** mark GapDataFetch as :failed, set error_message, terminate process
      - **If success:** parse JSON response
 4. Extract products array from JSON response
 5. For each product (ccId) in the response:
-   - Create/update Product record:
-     - `style_id` (from API)
+   - Retrieve or Create a Product record:
      - `cc_id` (unique identifier, from API)
+     - `style_id` (from API)
      - `style_name`, `cc_name`, and other fields
    - Create ProductData record:
      - Link to Product (product_id)

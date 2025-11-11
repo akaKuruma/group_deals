@@ -31,6 +31,7 @@ defmodule GroupDeals.GapFixtures do
 
   defp handle_pages_group_field(attrs) do
     case attrs do
+      %{pages_group_id: pages_group_id} -> Gap.get_pages_group!(pages_group_id)
       %{"pages_group_id" => pages_group_id} -> Gap.get_pages_group!(pages_group_id)
       _ -> pages_group_fixture()
     end

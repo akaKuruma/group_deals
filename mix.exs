@@ -74,7 +74,8 @@ defmodule GroupDeals.MixProject do
       {:bandit, "~> 1.5"},
       {:oban, "~> 2.19"},
       {:oban_web, "~> 2.0"},
-      {:igniter, "~> 0.5", only: [:dev]}
+      {:igniter, "~> 0.5", only: [:dev]},
+      {:bypass, "~> 2.1", only: :test}
     ]
   end
 

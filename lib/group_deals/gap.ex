@@ -8,6 +8,8 @@ defmodule GroupDeals.Gap do
 
   alias GroupDeals.Gap.PagesGroup
   alias GroupDeals.Gap.GapDataFetch
+  alias GroupDeals.Gap.GapProduct
+  alias GroupDeals.Gap.GapProductData
 
   @doc """
   Returns the list of pages_groups.
@@ -260,8 +262,44 @@ defmodule GroupDeals.Gap do
       where: f.id == ^id,
       where: f.status not in [:failed, :succeeded],
       limit: 1,
-      preload: :pages_group
+      preload: [pages_group: :gap_pages]
     )
     |> Repo.one!()
+  end
+
+  @doc """
+  Gets or creates a GapProduct by cc_id.
+  If the product already exists, returns it without updating.
+  """
+  def get_or_create_gap_product(attrs) do
+    case Repo.get_by(GapProduct, cc_id: attrs[:cc_id] || attrs["cc_id"]) do
+      nil ->
+        %GapProduct{}
+        |> GapProduct.changeset(attrs)
+        |> Repo.insert()
+
+      existing ->
+        {:ok, existing}
+    end
+  end
+
+  @doc """
+  Creates a gap_product_data record.
+  """
+  def create_gap_product_data(attrs) do
+    %GapProductData{}
+    |> GapProductData.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  @doc """
+  Lists all GapProductData for a given GapDataFetch.
+  """
+  def list_gap_product_data_for_fetch(gap_data_fetch_id) do
+    from(pd in GapProductData,
+      where: pd.gap_data_fetch_id == ^gap_data_fetch_id,
+      preload: [:product, :gap_data_fetch]
+    )
+    |> Repo.all()
   end
 end

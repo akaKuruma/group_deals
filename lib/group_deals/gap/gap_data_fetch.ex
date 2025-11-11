@@ -2,6 +2,7 @@ defmodule GroupDeals.Gap.GapDataFetch do
   use Ecto.Schema
   import Ecto.Changeset
   alias GroupDeals.Gap.PagesGroup
+  alias GroupDeals.Gap.GapProductData
 
   @type t :: %__MODULE__{
           id: binary,
@@ -52,6 +53,8 @@ defmodule GroupDeals.Gap.GapDataFetch do
     field :folder_timestamp, :string
 
     belongs_to :pages_group, PagesGroup
+
+    has_many :gap_product_data, GapProductData
 
     timestamps(type: :utc_datetime)
   end

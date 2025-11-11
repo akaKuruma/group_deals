@@ -7,6 +7,7 @@ defmodule GroupDeals.Gap do
   alias GroupDeals.Repo
 
   alias GroupDeals.Gap.PagesGroup
+  alias GroupDeals.Gap.GapDataFetch
 
   @doc """
   Returns the list of pages_groups.
@@ -18,7 +19,9 @@ defmodule GroupDeals.Gap do
 
   """
   def list_pages_groups do
-    Repo.all(PagesGroup)
+    PagesGroup
+    |> preload(:gap_data_fetches)
+    |> Repo.all()
   end
 
   @doc """
@@ -35,7 +38,11 @@ defmodule GroupDeals.Gap do
       ** (Ecto.NoResultsError)
 
   """
-  def get_pages_group!(id), do: Repo.get!(PagesGroup, id)
+  def get_pages_group!(id) do
+    PagesGroup
+    |> preload(:gap_data_fetches)
+    |> Repo.get!(id)
+  end
 
   @doc """
   Creates a pages_group.
@@ -211,5 +218,50 @@ defmodule GroupDeals.Gap do
   """
   def change_gap_page(%GapPage{} = gap_page, attrs \\ %{}) do
     GapPage.changeset(gap_page, attrs)
+  end
+
+  @doc """
+  Gets the active fetch for a pages_group, if one exists.
+  Active fetch = status not in [:failed, :succeeded]
+  """
+  def get_active_fetch_for_pages_group(pages_group_id) do
+    from(f in GapDataFetch,
+      where: f.pages_group_id == ^pages_group_id,
+      where: f.status not in [:failed, :succeeded],
+      order_by: [desc: f.inserted_at],
+      limit: 1
+    )
+    |> Repo.one()
+  end
+
+  @doc """
+  Creates a gap_data_fetch.
+  """
+  def create_gap_data_fetch(attrs) do
+    %GapDataFetch{}
+    |> GapDataFetch.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  @doc """
+  Updates a gap_data_fetch.
+  """
+  def update_gap_data_fetch(%GapDataFetch{} = gap_data_fetch, attrs) do
+    gap_data_fetch
+    |> GapDataFetch.changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
+  Gets a gap_data_fetch.
+  """
+  def get_active_gap_data_fetch!(id) do
+    from(f in GapDataFetch,
+      where: f.id == ^id,
+      where: f.status not in [:failed, :succeeded],
+      limit: 1,
+      preload: :pages_group
+    )
+    |> Repo.one!()
   end
 end

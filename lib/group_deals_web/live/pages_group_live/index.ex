@@ -2,6 +2,8 @@ defmodule GroupDealsWeb.PagesGroupLive.Index do
   use GroupDealsWeb, :live_view
 
   alias GroupDeals.Gap
+  alias GroupDeals.Gap.FetchCoordinator
+  alias GroupDeals.Gap.GapDataFetch
 
   @impl true
   def render(assigns) do
@@ -35,6 +37,17 @@ defmodule GroupDealsWeb.PagesGroupLive.Index do
           </.link>
         </:action>
 
+        <:action :let={{_id, pages_group}}>
+          <.button
+            phx-click="start_fetch"
+            phx-value-id={pages_group.id}
+            disabled={has_active_fetch?(pages_group)}
+            variant={if has_active_fetch?(pages_group), do: nil, else: "primary"}
+          >
+            <.icon name="hero-arrow-down-tray" /> Fetch Data
+          </.button>
+        </:action>
+
         <:action :let={{id, pages_group}}>
           <.link
             phx-click={JS.push("delete", value: %{id: pages_group.id}) |> hide("##{id}")}
@@ -64,7 +77,39 @@ defmodule GroupDealsWeb.PagesGroupLive.Index do
     {:noreply, stream_delete(socket, :pages_groups, pages_group)}
   end
 
+  @impl true
+  def handle_event("start_fetch", %{"id" => id}, socket) do
+    pages_group = Gap.get_pages_group!(id)
+
+    case FetchCoordinator.start_fetch(pages_group) do
+      {:ok, _gap_data_fetch} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Fetch process started successfully")
+         |> stream(:pages_groups, list_pages_groups(), reset: true)}
+
+      {:error, :active_fetch_exists} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "An active fetch process already exists for this pages group")}
+
+      {:error, changeset} ->
+        error_message =
+          case changeset.errors do
+            [{:pages_group_id, {message, _}}] -> message
+            _ -> "Failed to start fetch process"
+          end
+
+        {:noreply, put_flash(socket, :error, error_message)}
+    end
+  end
+
   defp list_pages_groups() do
     Gap.list_pages_groups()
+  end
+
+  defp has_active_fetch?(pages_group) do
+    pages_group.gap_data_fetches
+    |> Enum.any?(fn fetch -> GapDataFetch.active_status?(fetch.status) end)
   end
 end

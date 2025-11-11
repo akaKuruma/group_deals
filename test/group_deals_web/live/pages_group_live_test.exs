@@ -23,6 +23,73 @@ defmodule GroupDealsWeb.PagesGroupLiveTest do
       assert html =~ pages_group.title
     end
 
+    test "displays Fetch Data button", %{conn: conn} do
+      {:ok, index_live, html} = live(conn, ~p"/gap/pages_groups")
+
+      assert html =~ "Fetch Data"
+      assert has_element?(index_live, "button", "Fetch Data")
+    end
+
+    test "Fetch Data button is enabled when no active fetch exists", %{conn: conn} do
+      {:ok, index_live, _html} = live(conn, ~p"/gap/pages_groups")
+
+      button = element(index_live, "button[phx-click='start_fetch']")
+      assert has_element?(button)
+      refute render(button) =~ "disabled"
+    end
+
+    test "Fetch Data button is disabled when active fetch exists", %{
+      conn: conn,
+      pages_group: pages_group
+    } do
+      import GroupDeals.GapFixtures
+
+      gap_data_fetch_fixture(%{pages_group_id: pages_group.id, status: :pending})
+
+      {:ok, index_live, _html} = live(conn, ~p"/gap/pages_groups")
+
+      button = element(index_live, "button[phx-click='start_fetch']")
+      assert has_element?(button)
+      assert render(button) =~ "disabled"
+    end
+
+    test "start_fetch event creates gap_data_fetch and shows success message", %{
+      conn: conn,
+      pages_group: pages_group
+    } do
+      {:ok, index_live, _html} = live(conn, ~p"/gap/pages_groups")
+
+      index_live
+      |> element("button[phx-click='start_fetch'][phx-value-id='#{pages_group.id}']")
+      |> render_click()
+
+      assert render(index_live) =~ "Fetch process started successfully"
+    end
+
+    test "start_fetch event shows error when active fetch exists", %{
+      conn: conn,
+      pages_group: pages_group
+    } do
+      import GroupDeals.GapFixtures
+
+      gap_data_fetch_fixture(%{pages_group_id: pages_group.id, status: :pending})
+
+      {:ok, index_live, _html} = live(conn, ~p"/gap/pages_groups")
+
+      # Button should be disabled, so we trigger the event directly
+      send(index_live.pid, %Phoenix.Socket.Message{
+        topic: "lv:" <> index_live.id,
+        event: "event",
+        payload: %{
+          "type" => "click",
+          "event" => "start_fetch",
+          "value" => %{"id" => pages_group.id}
+        }
+      })
+
+      assert render(index_live) =~ "An active fetch process already exists"
+    end
+
     test "saves new pages_group", %{conn: conn} do
       {:ok, index_live, _html} = live(conn, ~p"/gap/pages_groups")
 
@@ -94,6 +161,76 @@ defmodule GroupDealsWeb.PagesGroupLiveTest do
 
       assert html =~ "Show Pages group"
       assert html =~ pages_group.title
+    end
+
+    test "displays Fetch Data button", %{conn: conn, pages_group: pages_group} do
+      {:ok, show_live, html} = live(conn, ~p"/gap/pages_groups/#{pages_group}")
+
+      assert html =~ "Fetch Data"
+      assert has_element?(show_live, "button", "Fetch Data")
+    end
+
+    test "Fetch Data button is enabled when no active fetch exists", %{
+      conn: conn,
+      pages_group: pages_group
+    } do
+      {:ok, show_live, _html} = live(conn, ~p"/gap/pages_groups/#{pages_group}")
+
+      button = element(show_live, "button[phx-click='start_fetch']")
+      assert has_element?(button)
+      refute render(button) =~ "disabled"
+    end
+
+    test "Fetch Data button is disabled when active fetch exists", %{
+      conn: conn,
+      pages_group: pages_group
+    } do
+      import GroupDeals.GapFixtures
+
+      gap_data_fetch_fixture(%{pages_group_id: pages_group.id, status: :pending})
+
+      {:ok, show_live, _html} = live(conn, ~p"/gap/pages_groups/#{pages_group}")
+
+      button = element(show_live, "button[phx-click='start_fetch']")
+      assert has_element?(button)
+      assert render(button) =~ "disabled"
+    end
+
+    test "start_fetch event creates gap_data_fetch and shows success message", %{
+      conn: conn,
+      pages_group: pages_group
+    } do
+      {:ok, show_live, _html} = live(conn, ~p"/gap/pages_groups/#{pages_group}")
+
+      show_live
+      |> element("button[phx-click='start_fetch'][phx-value-id='#{pages_group.id}']")
+      |> render_click()
+
+      assert render(show_live) =~ "Fetch process started successfully"
+    end
+
+    test "start_fetch event shows error when active fetch exists", %{
+      conn: conn,
+      pages_group: pages_group
+    } do
+      import GroupDeals.GapFixtures
+
+      gap_data_fetch_fixture(%{pages_group_id: pages_group.id, status: :pending})
+
+      {:ok, show_live, _html} = live(conn, ~p"/gap/pages_groups/#{pages_group}")
+
+      # Button should be disabled, so we trigger the event directly
+      send(show_live.pid, %Phoenix.Socket.Message{
+        topic: "lv:" <> show_live.id,
+        event: "event",
+        payload: %{
+          "type" => "click",
+          "event" => "start_fetch",
+          "value" => %{"id" => pages_group.id}
+        }
+      })
+
+      assert render(show_live) =~ "An active fetch process already exists"
     end
 
     test "updates pages_group and returns to show", %{conn: conn, pages_group: pages_group} do

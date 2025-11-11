@@ -45,4 +45,27 @@ defmodule GroupDeals.GapFixtures do
       web_page_parameters: %{}
     })
   end
+
+  @doc """
+  Generate a gap_data_fetch.
+  """
+  def gap_data_fetch_fixture(attrs \\ %{}) do
+    pages_group =
+      case attrs do
+        %{pages_group_id: pages_group_id} -> Gap.get_pages_group!(pages_group_id)
+        %{"pages_group_id" => pages_group_id} -> Gap.get_pages_group!(pages_group_id)
+        _ -> pages_group_fixture()
+      end
+
+    {:ok, gap_data_fetch} =
+      attrs
+      |> Enum.into(%{
+        pages_group_id: pages_group.id,
+        status: :pending,
+        folder_timestamp: "20241111000000"
+      })
+      |> Gap.create_gap_data_fetch()
+
+    gap_data_fetch
+  end
 end

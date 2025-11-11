@@ -57,7 +57,7 @@ defmodule GroupDeals.Workers.FetchGapPageJsonWorker do
   end
 
   defp create_folder(pages_group_id, folder_timestamp) do
-    folder_path = Path.join(["tmp", to_string(pages_group_id), folder_timestamp])
+    folder_path = Path.join(["tmp", "gap_site", pages_group_id, folder_timestamp])
     File.mkdir_p!(folder_path)
     folder_path
   end

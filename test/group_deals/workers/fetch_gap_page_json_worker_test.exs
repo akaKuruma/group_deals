@@ -99,7 +99,7 @@ defmodule GroupDeals.Workers.FetchGapPageJsonWorkerTest do
         state: "available"
       }
 
-      folder_path = Path.join(["tmp", to_string(pages_group.id), "20241111000000"])
+      folder_path = Path.join(["tmp", "gap_site", pages_group.id, "20241111000000"])
 
       # Ensure folder doesn't exist
       File.rm_rf(folder_path)

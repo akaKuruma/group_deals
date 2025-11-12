@@ -11,6 +11,23 @@ defmodule GroupDeals.Workers.FetchProductPagesWorkerTest do
 
   setup do
     bypass = Bypass.open()
+    bypass_url = "http://localhost:#{bypass.port}/browse/product.do"
+
+    # Save original config
+    original_url = Application.get_env(:group_deals, :gap_product_base_url)
+
+    # Set config to use Bypass
+    Application.put_env(:group_deals, :gap_product_base_url, bypass_url)
+
+    on_exit(fn ->
+      # Restore original config
+      if original_url do
+        Application.put_env(:group_deals, :gap_product_base_url, original_url)
+      else
+        Application.delete_env(:group_deals, :gap_product_base_url)
+      end
+    end)
+
     {:ok, bypass: bypass}
   end
 
@@ -111,10 +128,9 @@ defmodule GroupDeals.Workers.FetchProductPagesWorkerTest do
       assert File.exists?(file1_path)
       assert File.exists?(file2_path)
 
-      # Verify file contents exist (actual content may vary since we're making real requests)
-      # In a real scenario with proper mocking, we would verify exact content
-      assert File.read!(file1_path) != ""
-      assert File.read!(file2_path) != ""
+      # Verify file contents match what Bypass returned
+      assert File.read!(file1_path) == "<html><body>Product Page HTML</body></html>"
+      assert File.read!(file2_path) == "<html><body>Product Page HTML</body></html>"
 
       # Verify ProductData records were updated with file paths
       product_data1 = Repo.get_by!(GapProductData, product_id: product1.id)

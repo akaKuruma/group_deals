@@ -36,3 +36,6 @@ config :phoenix, :plug_init_mode, :runtime
 # Enable helpful, but potentially expensive runtime checks
 config :phoenix_live_view,
   enable_expensive_runtime_checks: true
+
+# Configure Gap product base URL for testing (will be overridden in tests with Bypass)
+config :group_deals, :gap_product_base_url, "http://any-host-name.local/browse/product.do"

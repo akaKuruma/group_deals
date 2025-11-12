@@ -3,8 +3,12 @@ defmodule GroupDeals.Gap.ProductUrlBuilder do
   Builds product page URLs for Gap Factory products.
   """
 
-  @base_url "https://www.gapfactory.com/browse/product.do"
+  @default_base_url "https://www.gapfactory.com/browse/product.do"
   @default_vid "1"
+
+  defp base_url do
+    Application.get_env(:group_deals, :gap_product_base_url, @default_base_url)
+  end
 
   @doc """
   Builds a product URL from cc_id and GapPage parameters.
@@ -63,11 +67,11 @@ defmodule GroupDeals.Gap.ProductUrlBuilder do
     query_params = if nav, do: query_params ++ [{"nav", nav}], else: query_params
 
     query_string = URI.encode_query(query_params)
-    "#{@base_url}?#{query_string}#pdp-page-content"
+    "#{base_url()}?#{query_string}#pdp-page-content"
   end
 
   defp build_minimal_url(cc_id) do
-    "#{@base_url}?pid=#{cc_id}"
+    "#{base_url()}?pid=#{cc_id}"
   end
 
   defp get_param(params, key, default \\ nil) do

@@ -4,6 +4,22 @@ defmodule GroupDeals.Gap.ProductUrlBuilderTest do
   alias GroupDeals.Gap.ProductUrlBuilder
   alias GroupDeals.Gap.GapPage
 
+  setup do
+    # Use production URL for these tests since we're testing URL building logic
+    original_url = Application.get_env(:group_deals, :gap_product_base_url)
+    Application.put_env(:group_deals, :gap_product_base_url, "https://www.gapfactory.com/browse/product.do")
+
+    on_exit(fn ->
+      if original_url do
+        Application.put_env(:group_deals, :gap_product_base_url, original_url)
+      else
+        Application.delete_env(:group_deals, :gap_product_base_url)
+      end
+    end)
+
+    :ok
+  end
+
   describe "build_product_url/2" do
     test "builds full URL with all parameters from GapPage" do
       gap_page = %GapPage{

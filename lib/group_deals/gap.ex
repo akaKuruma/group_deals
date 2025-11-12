@@ -302,4 +302,13 @@ defmodule GroupDeals.Gap do
     )
     |> Repo.all()
   end
+
+  @doc """
+  Updates a gap_product_data record.
+  """
+  def update_gap_product_data(%GapProductData{} = gap_product_data, attrs) do
+    gap_product_data
+    |> GapProductData.changeset(attrs)
+    |> Repo.update()
+  end
 end

@@ -64,15 +64,8 @@ defmodule GroupDeals.Workers.FetchGapPageJsonWorker do
 
   defp schedule_next_job(gap_data_fetch_id) do
     # Schedule Job 2: FetchProductPagesWorker
-    # Note: This worker doesn't exist yet, but we'll create a placeholder
-    # For now, we'll just log that it should be scheduled
-    Logger.info(
-      "All pages processed. Next job (FetchProductPagesWorker) should be scheduled for gap_data_fetch_id: #{gap_data_fetch_id}"
-    )
-
-    # TODO: Uncomment when FetchProductPagesWorker is created
-    # %{gap_data_fetch_id: gap_data_fetch_id}
-    # |> GroupDeals.Workers.FetchProductPagesWorker.new()
-    # |> Oban.insert()
+    %{gap_data_fetch_id: gap_data_fetch_id}
+    |> GroupDeals.Workers.FetchProductPagesWorker.new()
+    |> Oban.insert()
   end
 end

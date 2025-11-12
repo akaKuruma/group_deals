@@ -24,6 +24,15 @@ defmodule GroupDeals.Gap.ApiClient do
     fetch_with_retry(url, 1)
   end
 
+  @doc """
+  Fetches HTML from a product page URL with retry logic.
+
+  Returns `{:ok, html_string}` on success or `{:error, reason}` on failure.
+  """
+  def fetch_product_html(url) do
+    fetch_html_with_retry(url, 1)
+  end
+
   defp fetch_with_retry(_url, attempt) when attempt > @max_retries do
     {:error, :max_retries_exceeded}
   end
@@ -46,6 +55,28 @@ defmodule GroupDeals.Gap.ApiClient do
     end
   end
 
+  defp fetch_html_with_retry(_url, attempt) when attempt > @max_retries do
+    {:error, :max_retries_exceeded}
+  end
+
+  defp fetch_html_with_retry(url, attempt) do
+    case do_fetch_html(url) do
+      {:ok, html} ->
+        # Sleep after successful request (2 + random(0-1) seconds)
+        sleep_random()
+        {:ok, html}
+
+      {:error, reason} ->
+        if attempt < @max_retries do
+          # Sleep before retry (2 + random(0-1) seconds)
+          sleep_random()
+          fetch_html_with_retry(url, attempt + 1)
+        else
+          {:error, reason}
+        end
+    end
+  end
+
   defp do_fetch(url) do
     try do
       case Req.get(url, headers: @headers, receive_timeout: 30_000, retry: req_retry_opts()) do
@@ -60,6 +91,36 @@ defmodule GroupDeals.Gap.ApiClient do
                 {:ok, json} -> {:ok, json}
                 {:error, reason} -> {:error, {:json_decode_error, reason}}
               end
+
+            other ->
+              {:error, {:invalid_body_type, other}}
+          end
+
+        {:ok, %Req.Response{status: status}} ->
+          {:error, {:http_error, status}}
+
+        {:error, reason} ->
+          {:error, {:request_error, reason}}
+      end
+    rescue
+      e -> {:error, {:exception, Exception.message(e)}}
+    catch
+      :exit, reason -> {:error, {:exit, reason}}
+    end
+  end
+
+  defp do_fetch_html(url) do
+    try do
+      case Req.get(url,
+             headers: @headers,
+             receive_timeout: 30_000,
+             retry: req_retry_opts(),
+             decode_body: false
+           ) do
+        {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
+          case body do
+            string when is_binary(string) ->
+              {:ok, string}
 
             other ->
               {:error, {:invalid_body_type, other}}

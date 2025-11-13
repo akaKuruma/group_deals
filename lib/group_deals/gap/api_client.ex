@@ -15,6 +15,8 @@ defmodule GroupDeals.Gap.ApiClient do
     {"Referer", "https://www.gapfactory.com/"}
   ]
 
+  @gap_homepage "https://www.gapfactory.com/"
+
   @doc """
   Fetches JSON from the Gap API with retry logic.
 
@@ -26,11 +28,32 @@ defmodule GroupDeals.Gap.ApiClient do
 
   @doc """
   Fetches HTML from a product page URL with retry logic.
+  Establishes a session first by visiting the homepage to get cookies,
+  then fetches the product page using the same client to maintain cookies.
 
   Returns `{:ok, html_string}` on success or `{:error, reason}` on failure.
   """
   def fetch_product_html(url) do
-    fetch_html_with_retry(url, 1)
+    # Create a cookie jar to store cookies
+    jar = HttpCookie.Jar.new()
+
+    # Create a Req client with HttpCookie plugin attached
+    client =
+      Req.new(
+        base_url: "https://www.gapfactory.com",
+        headers: @headers,
+        receive_timeout: 30_000
+      )
+      |> HttpCookie.ReqPlugin.attach()
+
+    # First, establish a session by visiting the homepage
+    # This will set cookies that Gap requires
+    with {:ok, updated_jar} <- ensure_session(client, jar),
+         {:ok, html} <- fetch_html_with_retry(client, updated_jar, url, 1) do
+      {:ok, html}
+    else
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   defp fetch_with_retry(_url, attempt) when attempt > @max_retries do
@@ -55,13 +78,13 @@ defmodule GroupDeals.Gap.ApiClient do
     end
   end
 
-  defp fetch_html_with_retry(_url, attempt) when attempt > @max_retries do
+  defp fetch_html_with_retry(_client, _jar, _url, attempt) when attempt > @max_retries do
     {:error, :max_retries_exceeded}
   end
 
-  defp fetch_html_with_retry(url, attempt) do
-    case do_fetch_html(url) do
-      {:ok, html} ->
+  defp fetch_html_with_retry(client, jar, url, attempt) do
+    case do_fetch_html(client, jar, url) do
+      {:ok, html, _updated_jar} ->
         # Sleep after successful request (2 + random(0-1) seconds)
         sleep_random()
         {:ok, html}
@@ -70,7 +93,7 @@ defmodule GroupDeals.Gap.ApiClient do
         if attempt < @max_retries do
           # Sleep before retry (2 + random(0-1) seconds)
           sleep_random()
-          fetch_html_with_retry(url, attempt + 1)
+          fetch_html_with_retry(client, jar, url, attempt + 1)
         else
           {:error, reason}
         end
@@ -109,18 +132,56 @@ defmodule GroupDeals.Gap.ApiClient do
     end
   end
 
-  defp do_fetch_html(url) do
+  defp ensure_session(client, jar) do
     try do
-      case Req.get(url,
-             headers: @headers,
-             receive_timeout: 30_000,
-             retry: req_retry_opts(),
-             decode_body: false
-           ) do
-        {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
+      # Visit homepage to establish session and get cookies
+      # HttpCookie plugin will automatically handle cookies
+      request =
+        Req.merge(client,
+          url: @gap_homepage,
+          decode_body: false,
+          cookie_jar: jar
+        )
+
+      case Req.get(request) do
+        {:ok, %Req.Response{status: status} = response} when status in 200..299 ->
+          # HttpCookie plugin automatically updates the jar
+          # Extract the updated jar from the response
+          updated_jar = response.private[:cookie_jar] || jar
+          {:ok, updated_jar}
+
+        {:ok, %Req.Response{status: status}} ->
+          {:error, {:http_error, status}}
+
+        {:error, reason} ->
+          {:error, {:session_failed, reason}}
+      end
+    rescue
+      e -> {:error, {:exception, Exception.message(e)}}
+    catch
+      :exit, reason -> {:error, {:exit, reason}}
+    end
+  end
+
+  defp do_fetch_html(client, jar, url) do
+    try do
+      # HttpCookie plugin will automatically add cookies from the jar to the request
+      # and update the jar with any new cookies from the response
+      request =
+        Req.merge(client,
+          url: url,
+          decode_body: false,
+          cookie_jar: jar
+        )
+
+      case Req.get(request) do
+        {:ok, %Req.Response{status: status, body: body} = response} when status in 200..299 ->
+          # Extract the updated jar from the response
+          updated_jar = response.private[:cookie_jar] || jar
+
           case body do
             string when is_binary(string) ->
-              {:ok, string}
+              {:ok, string, updated_jar}
 
             other ->
               {:error, {:invalid_body_type, other}}

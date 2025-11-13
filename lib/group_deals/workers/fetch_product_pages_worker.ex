@@ -38,15 +38,19 @@ defmodule GroupDeals.Workers.FetchProductPagesWorker do
             :ok
 
           {:error, reason} ->
-            Logger.error("Failed to process products: #{inspect(reason)}")
+            if Mix.env() != :test,
+              do: Logger.error("Failed to process products: #{inspect(reason)}")
+
             mark_as_failed(gap_data_fetch, "Failed to process products: #{inspect(reason)}")
-            :error
+            {:error, reason}
         end
 
       {:error, changeset} ->
-        Logger.error("Failed to update GapDataFetch status: #{inspect(changeset)}")
+        if Mix.env() != :test,
+          do: Logger.error("Failed to update GapDataFetch status: #{inspect(changeset)}")
+
         mark_as_failed(gap_data_fetch, "Failed to update status")
-        :error
+        {:error, Gap.traverse_changeset_errors(changeset)}
     end
   end
 

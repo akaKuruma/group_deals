@@ -311,4 +311,21 @@ defmodule GroupDeals.Gap do
     |> GapProductData.changeset(attrs)
     |> Repo.update()
   end
+
+  alias Ecto.Changeset
+  @doc """
+  Transverse Changeset errors to a string.
+  """
+  def traverse_changeset_errors(changeset) do
+    changeset
+    |> Changeset.traverse_errors(fn {msg, opts} ->
+      Enum.reduce(opts, msg, fn {key, value}, acc ->
+        String.replace(acc, "%{#{key}}", to_string(value))
+      end)
+    end)
+    |> Enum.map(fn {field, messages} ->
+      "#{field}: #{Enum.join(messages, ", ")}"
+    end)
+    |> Enum.join("; ")
+  end
 end

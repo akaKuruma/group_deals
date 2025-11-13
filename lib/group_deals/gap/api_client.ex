@@ -27,6 +27,32 @@ defmodule GroupDeals.Gap.ApiClient do
   end
 
   @doc """
+  Creates a reusable session (client + cookie jar) by visiting the homepage.
+  This session can be reused for multiple product page requests.
+
+  Returns `{:ok, {client, jar}}` on success or `{:error, reason}` on failure.
+  """
+  def create_session do
+    jar = HttpCookie.Jar.new()
+
+    client =
+      Req.new(
+        base_url: "https://www.gapfactory.com",
+        headers: @headers,
+        receive_timeout: 30_000
+      )
+      |> HttpCookie.ReqPlugin.attach()
+
+    case ensure_session(client, jar) do
+      {:ok, updated_jar} ->
+        {:ok, {client, updated_jar}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @doc """
   Fetches HTML from a product page URL with retry logic.
   Establishes a session first by visiting the homepage to get cookies,
   then fetches the product page using the same client to maintain cookies.
@@ -49,10 +75,27 @@ defmodule GroupDeals.Gap.ApiClient do
     # First, establish a session by visiting the homepage
     # This will set cookies that Gap requires
     with {:ok, updated_jar} <- ensure_session(client, jar),
-         {:ok, html} <- fetch_html_with_retry(client, updated_jar, url, 1) do
+         {:ok, html, _updated_jar} <- fetch_html_with_retry(client, updated_jar, url, 1) do
       {:ok, html}
     else
       {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Fetches HTML from a product page URL using an existing session.
+  This is more efficient as it reuses the session established by `create_session/0`.
+
+  Returns `{:ok, html_string, updated_session}` on success or `{:error, reason}` on failure.
+  The updated_session should be used for subsequent requests to maintain cookie state.
+  """
+  def fetch_product_html(url, {client, jar}) do
+    case fetch_html_with_retry(client, jar, url, 1) do
+      {:ok, html, updated_jar} ->
+        {:ok, html, {client, updated_jar}}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
@@ -84,10 +127,10 @@ defmodule GroupDeals.Gap.ApiClient do
 
   defp fetch_html_with_retry(client, jar, url, attempt) do
     case do_fetch_html(client, jar, url) do
-      {:ok, html, _updated_jar} ->
+      {:ok, html, updated_jar} ->
         # Sleep after successful request (2 + random(0-1) seconds)
         sleep_random()
-        {:ok, html}
+        {:ok, html, updated_jar}
 
       {:error, reason} ->
         if attempt < @max_retries do

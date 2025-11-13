@@ -75,7 +75,12 @@ defmodule GroupDeals.Workers.FetchProductPagesWorker do
       end
 
     # Process each ProductData sequentially
-    GapProductPagesHandler.process_products(updated_fetch, product_data_list, gap_page, pages_group_id)
+    GapProductPagesHandler.process_products(
+      updated_fetch,
+      product_data_list,
+      gap_page,
+      pages_group_id
+    )
   end
 
   defp mark_as_failed(gap_data_fetch, error_message) do

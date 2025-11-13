@@ -7,7 +7,12 @@ defmodule GroupDeals.Gap.ProductUrlBuilderTest do
   setup do
     # Use production URL for these tests since we're testing URL building logic
     original_url = Application.get_env(:group_deals, :gap_product_base_url)
-    Application.put_env(:group_deals, :gap_product_base_url, "https://www.gapfactory.com/browse/product.do")
+
+    Application.put_env(
+      :group_deals,
+      :gap_product_base_url,
+      "https://www.gapfactory.com/browse/product.do"
+    )
 
     on_exit(fn ->
       if original_url do

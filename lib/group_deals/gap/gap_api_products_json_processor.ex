@@ -4,7 +4,7 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessor do
   """
 
   alias GroupDeals.Gap
-  alias GroupDeals.Gap.ApiClient
+  alias GroupDeals.Gap.HttpClient
   require Logger
 
   @doc """
@@ -50,7 +50,7 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessor do
   defp process_page(gap_data_fetch, gap_page) do
     Logger.info("Processing GapPage: #{gap_page.title} (#{gap_page.api_url})")
 
-    case ApiClient.fetch_api_json(gap_page.api_url) do
+    case HttpClient.fetch_json_api(gap_page.api_url) do
       {:ok, json_body} ->
         extract_and_store_products(gap_data_fetch, json_body)
 

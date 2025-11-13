@@ -13,6 +13,7 @@ defmodule GroupDeals.Application do
       {DNSCluster, query: Application.get_env(:group_deals, :dns_cluster_query) || :ignore},
       {Oban, Application.fetch_env!(:group_deals, Oban)},
       {Phoenix.PubSub, name: GroupDeals.PubSub},
+      {GroupDeals.Gap.HttpClient, []},
       # Start a worker by calling: GroupDeals.Worker.start_link(arg)
       # {GroupDeals.Worker, arg},
       # Start to serve requests, typically the last entry

@@ -313,6 +313,7 @@ defmodule GroupDeals.Gap do
   end
 
   alias Ecto.Changeset
+
   @doc """
   Transverse Changeset errors to a string.
   """

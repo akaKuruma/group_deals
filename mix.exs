@@ -76,7 +76,8 @@ defmodule GroupDeals.MixProject do
       {:oban, "~> 2.19"},
       {:oban_web, "~> 2.0"},
       {:igniter, "~> 0.5", only: [:dev]},
-      {:bypass, "~> 2.1", only: :test}
+      {:bypass, "~> 2.1", only: :test},
+      {:floki, "~> 0.36"}
     ]
   end
 

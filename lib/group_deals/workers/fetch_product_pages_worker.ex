@@ -74,14 +74,42 @@ defmodule GroupDeals.Workers.FetchProductPagesWorker do
         gap_data_fetch
       end
 
+    # Determine id_store_category from gap_page nav parameter
+    id_store_category = determine_id_store_category(gap_page)
+
     # Process each ProductData sequentially
     GapProductPagesHandler.process_products(
       updated_fetch,
       product_data_list,
       gap_page,
-      pages_group_id
+      pages_group_id,
+      id_store_category
     )
   end
+
+  # Determines id_store_category from gap_page nav parameter
+  # Maps nav categories to store category IDs based on Python script
+  defp determine_id_store_category(nil), do: 5 # Default to women's
+
+  defp determine_id_store_category(%{web_page_parameters: nil}), do: 5
+
+  defp determine_id_store_category(%{web_page_parameters: params}) do
+    nav = Map.get(params, "nav") || Map.get(params, :nav) || ""
+
+    cond do
+      String.contains?(nav, "Women") -> 5
+      String.contains?(nav, "Men") -> 4
+      String.contains?(nav, "Girls") -> 253
+      String.contains?(nav, "Boys") -> 67
+      String.contains?(nav, "Baby Girl") -> 255
+      String.contains?(nav, "Baby Boy") -> 10
+      String.contains?(nav, "Toddler Girls") -> 254
+      String.contains?(nav, "Toddler Boys") -> 68
+      true -> 5 # Default to women's
+    end
+  end
+
+  defp determine_id_store_category(_), do: 5
 
   defp mark_as_failed(gap_data_fetch, error_message) do
     Gap.update_gap_data_fetch(gap_data_fetch, %{
@@ -90,16 +118,9 @@ defmodule GroupDeals.Workers.FetchProductPagesWorker do
     })
   end
 
-  defp schedule_next_job(gap_data_fetch_id) do
-    # Schedule Job 3: ParseProductPagesWorker
-    # Note: This worker doesn't exist yet, but we'll create a placeholder
-    Logger.info(
-      "All product pages fetched. Next job (ParseProductPagesWorker) should be scheduled for gap_data_fetch_id: #{gap_data_fetch_id}"
-    )
-
-    # TODO: Uncomment when ParseProductPagesWorker is created
-    # %{gap_data_fetch_id: gap_data_fetch_id}
-    # |> GroupDeals.Workers.ParseProductPagesWorker.new()
-    # |> Oban.insert()
+  defp schedule_next_job(_gap_data_fetch_id) do
+    # Parsing jobs are now scheduled per-product in GapProductPagesHandler
+    # No need to schedule a batch job here
+    :ok
   end
 end

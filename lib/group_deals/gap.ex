@@ -304,6 +304,15 @@ defmodule GroupDeals.Gap do
   end
 
   @doc """
+  Gets a single gap_product_data by ID.
+  """
+  def get_gap_product_data!(id) do
+    GapProductData
+    |> Repo.get!(id)
+    |> Repo.preload([:product, :gap_data_fetch])
+  end
+
+  @doc """
   Updates a gap_product_data record.
   """
   def update_gap_product_data(%GapProductData{} = gap_product_data, attrs) do

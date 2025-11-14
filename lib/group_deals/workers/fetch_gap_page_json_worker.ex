@@ -14,7 +14,7 @@ defmodule GroupDeals.Workers.FetchGapPageJsonWorker do
   alias Oban
   require Logger
 
-  use Oban.Worker, queue: :default
+  use Oban.Worker, queue: :fetch_group_products_json
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"gap_data_fetch_id" => gap_data_fetch_id}}) do

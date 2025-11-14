@@ -10,8 +10,13 @@ import Config
 config :group_deals, Oban,
   engine: Oban.Engines.Basic,
   notifier: Oban.Notifiers.Postgres,
-  queues: [default: 10],
-  repo: GroupDeals.Repo
+  repo: GroupDeals.Repo,
+  queues: [
+    default: 10,
+    fetch_group_products_json: 2,
+    fetch_product_html_page: 2,
+    parse_product_html_page: 20
+  ]
 
 config :group_deals,
   ecto_repos: [GroupDeals.Repo],

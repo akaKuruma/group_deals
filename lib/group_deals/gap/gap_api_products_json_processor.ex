@@ -93,6 +93,9 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessor do
           # Extract image paths
           image_paths = Enum.map(images, fn img -> Map.get(img, "path") end)
 
+          # Extract marketing flag from ccLevelMarketingFlags
+          marketing_flag = extract_marketing_flag(style_color)
+
           # Get or create GapProduct
           case Gap.get_or_create_gap_product(%{
                  cc_id: to_string(cc_id),
@@ -101,12 +104,13 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessor do
                  cc_name: cc_name
                }) do
             {:ok, gap_product} ->
-              # Create GapProductData
+              # Create GapProductData with marketing_flag
               case Gap.create_gap_product_data(%{
                      product_id: gap_product.id,
                      gap_data_fetch_id: gap_data_fetch.id,
                      folder_timestamp: gap_data_fetch.folder_timestamp,
-                     api_image_paths: image_paths
+                     api_image_paths: image_paths,
+                     marketing_flag: marketing_flag
                    }) do
                 {:ok, _gap_product_data} ->
                   color_acc + 1
@@ -124,6 +128,20 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessor do
       end)
 
     {:ok, product_count}
+  end
+
+  # Extracts marketing flag from ccLevelMarketingFlags array
+  # Returns the first flag's content, or empty string if none found
+  defp extract_marketing_flag(style_color) do
+    case Map.get(style_color, "ccLevelMarketingFlags") do
+      flags when is_list(flags) and length(flags) > 0 ->
+        # Get the first flag's content
+        first_flag = List.first(flags)
+        Map.get(first_flag, "content", "")
+
+      _ ->
+        ""
+    end
   end
 
   defp mark_as_failed(gap_data_fetch, error_message) do

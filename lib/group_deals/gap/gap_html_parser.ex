@@ -6,6 +6,7 @@ defmodule GroupDeals.Gap.GapHtmlParser do
   """
 
   alias GroupDeals.Gap.SizeMapper
+  alias GroupDeals.Gap.DiscountCalculator
 
   @doc """
   Parses HTML content and extracts product data.
@@ -16,21 +17,28 @@ defmodule GroupDeals.Gap.GapHtmlParser do
   - description: product title/description
   - price: product price (as string)
   - available_sizes: comma-separated list of size IDs (for compatibility)
+  - discount: discount percentage (integer)
+  - second_discount_percentage: second discount percentage (integer)
   """
-  @spec parse_html(String.t(), integer()) :: map()
-  def parse_html(html, id_store_category) do
+  @spec parse_html(String.t(), integer(), String.t() | nil) :: map()
+  def parse_html(html, id_store_category, marketing_flag \\ nil) do
     html
     |> Floki.parse_document!()
-    |> extract_product_data(id_store_category)
+    |> extract_product_data(id_store_category, marketing_flag)
   end
 
-  defp extract_product_data(html_tree, id_store_category) do
+  defp extract_product_data(html_tree, id_store_category, marketing_flag) do
+    # Calculate discounts from marketing_flag
+    discounts = DiscountCalculator.calculate_discounts(marketing_flag)
+
     %{
       sizes: extract_sizes(html_tree, id_store_category),
       image_url: extract_image_url(html_tree),
       description: extract_description(html_tree),
       price: extract_price(html_tree),
-      available_sizes: extract_available_sizes_string(html_tree, id_store_category)
+      available_sizes: extract_available_sizes_string(html_tree, id_store_category),
+      discount: discounts.discount,
+      second_discount_percentage: discounts.second_discount_percentage
     }
   end
 

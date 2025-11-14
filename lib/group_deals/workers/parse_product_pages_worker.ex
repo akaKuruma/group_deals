@@ -53,8 +53,8 @@ defmodule GroupDeals.Workers.ParseProductPagesWorker do
     else
       case File.read(product_data.html_file_path) do
         {:ok, html} ->
-          # Parse HTML and extract product data
-          parsed_data = GapHtmlParser.parse_html(html, id_store_category)
+          # Parse HTML and extract product data (including discount calculation from marketing_flag)
+          parsed_data = GapHtmlParser.parse_html(html, id_store_category, product_data.marketing_flag)
 
           # Update ProductData with parsed data
           case Gap.update_gap_product_data(product_data, %{parsed_data: parsed_data}) do

@@ -15,7 +15,8 @@ config :group_deals, Oban,
     default: 10,
     fetch_group_products_json: 2,
     fetch_product_html_page: 2,
-    parse_product_html_page: 20
+    parse_product_html_page: 20,
+    download_product_image: 5
   ]
 
 config :group_deals,

@@ -74,6 +74,47 @@ async function main() {
     await browserPage.setUserAgent(
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     );
+    // Visit Gap homepage first to establish session and cookies
+    // This helps avoid failures on the first product page fetch
+    console.log('Establishing session by visiting Gap homepage...');
+    try {
+      await browserPage.goto('https://www.gapfactory.com/', {
+        waitUntil: 'networkidle0',
+        timeout: 60000
+      });
+      
+      // Wait for any cookie consent dialogs to appear and handle them
+      // Try to find and click common consent button selectors
+      const consentSelectors = [
+        'button[id*="accept"]',
+        'button[class*="accept"]',
+        'button[id*="consent"]',
+        'button[class*="consent"]',
+        'button:has-text("Accept")',
+        'button:has-text("I Accept")',
+        '[data-testid*="accept"]'
+      ];
+      
+      for (const selector of consentSelectors) {
+        try {
+          const button = await browserPage.$(selector);
+          if (button) {
+            await button.click();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            break;
+          }
+        } catch (e) {
+          // Continue to next selector
+        }
+      }
+      
+      // Wait a bit for session to fully establish
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log('Session established successfully');
+    } catch (error) {
+      console.warn(`Warning: Failed to establish session on homepage: ${error.message}`);
+      console.warn('Continuing anyway, but first product fetch may fail...');
+    }
     
     let successCount = 0;
     let failCount = 0;

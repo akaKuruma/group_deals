@@ -5,6 +5,8 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessor do
 
   alias GroupDeals.Gap
   alias GroupDeals.Gap.HttpClient
+  alias GroupDeals.Workers.DownloadProductImageWorker
+  alias Oban
   require Logger
 
   @doc """
@@ -90,8 +92,8 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessor do
               _ -> []
             end
 
-          # Extract image paths
-          image_paths = Enum.map(images, fn img -> Map.get(img, "path") end)
+          # Extract primary image path (P01 type) to match Python scraper behavior
+          primary_image_path = extract_primary_image_path(images)
 
           # Extract marketing flag from ccLevelMarketingFlags
           marketing_flag = extract_marketing_flag(style_color)
@@ -109,10 +111,23 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessor do
                      product_id: gap_product.id,
                      gap_data_fetch_id: gap_data_fetch.id,
                      folder_timestamp: gap_data_fetch.folder_timestamp,
-                     api_image_paths: image_paths,
+                     api_image_paths: [primary_image_path],
                      marketing_flag: marketing_flag
                    }) do
-                {:ok, _gap_product_data} ->
+                {:ok, gap_product_data} ->
+                  # Increment total_images if image path exists
+                  if primary_image_path != "" do
+                    case Gap.update_gap_data_fetch(gap_data_fetch, %{
+                           total_images: gap_data_fetch.total_images + 1
+                         }) do
+                      {:ok, _} -> :ok
+                      {:error, _} -> :ok
+                    end
+                  end
+
+                  # Schedule image download job immediately
+                  schedule_image_download(gap_product_data.id, gap_data_fetch.id)
+
                   color_acc + 1
 
                 {:error, changeset} ->
@@ -142,6 +157,40 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessor do
       _ ->
         ""
     end
+  end
+
+  # Extracts the primary image path (P01 type) to match Python scraper behavior
+  # Falls back to first image with position 1 if P01 not found
+  # Returns empty string if no images found
+  defp extract_primary_image_path(images) when is_list(images) do
+    # First, try to find P01 (Primary) image
+    p01_image = Enum.find(images, fn img -> Map.get(img, "type") == "P01" end)
+
+    case p01_image do
+      nil ->
+        # Fallback: find first image with position 1
+        position_1_image = Enum.find(images, fn img -> Map.get(img, "position") == 1 end)
+
+        case position_1_image do
+          nil -> ""
+          img -> Map.get(img, "path", "")
+        end
+
+      img ->
+        Map.get(img, "path", "")
+    end
+  end
+
+  defp extract_primary_image_path(_), do: ""
+
+  # Schedules the DownloadProductImageWorker job
+  defp schedule_image_download(product_data_id, gap_data_fetch_id) do
+    %{
+      "product_data_id" => product_data_id,
+      "gap_data_fetch_id" => gap_data_fetch_id
+    }
+    |> DownloadProductImageWorker.new()
+    |> Oban.insert()
   end
 
   defp mark_as_failed(gap_data_fetch, error_message) do

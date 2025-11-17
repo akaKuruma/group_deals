@@ -40,3 +40,6 @@ npm-debug.log
 
 # tmp files
 tmp/
+
+# Ignore node_modules
+node_modules/

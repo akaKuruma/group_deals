@@ -1,0 +1,14 @@
+{
+  "name": "group_deals",
+  "version": "1.0.0",
+  "description": "Puppeteer script to fetch Gap product pages",
+  "main": "scripts/fetch_pages.js",
+  "scripts": {
+    "start": "node scripts/fetch_pages.js"
+  },
+  "dependencies": {
+    "puppeteer": "^24.30.0",
+    "pg": "^8.11.3"
+  }
+}
+

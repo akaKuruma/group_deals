@@ -15,16 +15,28 @@ defmodule GroupDeals.Gap.GapProductPagesHandler do
 
   Returns `{:ok, count}` on success or `{:error, reason}` on failure.
   """
-  def process_products(gap_data_fetch, product_data_list, gap_page, pages_group_id, id_store_category) do
+  def process_products(
+        gap_data_fetch,
+        product_data_list,
+        gap_page,
+        pages_group_id,
+        id_store_category
+      ) do
     folder_path =
-      Path.join(["tmp", "gap_site", pages_group_id, gap_data_fetch.folder_timestamp])
+      Path.join(["/tmp/gap_site", pages_group_id, gap_data_fetch.folder_timestamp])
 
     # Ensure folder exists
     File.mkdir_p!(folder_path)
 
     Enum.reduce_while(product_data_list, {gap_data_fetch, 0}, fn product_data,
                                                                  {current_fetch, processed} ->
-      case process_product(product_data, gap_page, folder_path, gap_data_fetch.id, id_store_category) do
+      case process_product(
+             product_data,
+             gap_page,
+             folder_path,
+             gap_data_fetch.id,
+             id_store_category
+           ) do
         {:ok, _updated_product_data} ->
           # Update processed_products counter
           case Gap.update_gap_data_fetch(current_fetch, %{
@@ -61,11 +73,25 @@ defmodule GroupDeals.Gap.GapProductPagesHandler do
       product_url = ProductUrlBuilder.build_product_url(product.cc_id, gap_page || %{})
 
       # Fetch HTML and save to file using the shared session
-      fetch_and_save_html(product_data, product_url, product.cc_id, folder_path, gap_data_fetch_id, id_store_category)
+      fetch_and_save_html(
+        product_data,
+        product_url,
+        product.cc_id,
+        folder_path,
+        gap_data_fetch_id,
+        id_store_category
+      )
     end
   end
 
-  defp fetch_and_save_html(product_data, product_url, cc_id, folder_path, gap_data_fetch_id, id_store_category) do
+  defp fetch_and_save_html(
+         product_data,
+         product_url,
+         cc_id,
+         folder_path,
+         gap_data_fetch_id,
+         id_store_category
+       ) do
     case HttpClient.fetch_product_html_page(product_url) do
       {:ok, html} ->
         # Save HTML to file

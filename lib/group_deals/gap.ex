@@ -338,4 +338,55 @@ defmodule GroupDeals.Gap do
     end)
     |> Enum.join("; ")
   end
+
+  @doc """
+  Checks if all pages have been fetched for a given GapDataFetch.
+  Returns stats about fetch status.
+  """
+  def check_page_fetch_completion(gap_data_fetch_id) do
+    base_query = from(pd in GapProductData, where: pd.gap_data_fetch_id == ^gap_data_fetch_id)
+
+    total = Repo.aggregate(base_query, :count, :id)
+
+    pending_query =
+      from(pd in GapProductData,
+        where: pd.gap_data_fetch_id == ^gap_data_fetch_id and pd.page_fetch_status == ^:pending
+      )
+
+    pending = Repo.aggregate(pending_query, :count, :id)
+
+    succeeded_query =
+      from(pd in GapProductData,
+        where: pd.gap_data_fetch_id == ^gap_data_fetch_id and pd.page_fetch_status == ^:succeeded
+      )
+
+    succeeded = Repo.aggregate(succeeded_query, :count, :id)
+
+    failed_query =
+      from(pd in GapProductData,
+        where: pd.gap_data_fetch_id == ^gap_data_fetch_id and pd.page_fetch_status == ^:failed
+      )
+
+    failed = Repo.aggregate(failed_query, :count, :id)
+
+    %{
+      total: total,
+      pending: pending,
+      succeeded: succeeded,
+      failed: failed
+    }
+  end
+
+  @doc """
+  Lists all GapProductData with pending page fetch status.
+  """
+  def list_pending_page_fetches(gap_data_fetch_id) do
+    from(pd in GapProductData,
+      where:
+        pd.gap_data_fetch_id == ^gap_data_fetch_id and
+          pd.page_fetch_status == ^:pending,
+      preload: [:product]
+    )
+    |> Repo.all()
+  end
 end

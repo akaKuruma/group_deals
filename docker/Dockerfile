@@ -44,7 +44,16 @@ RUN apk update && apk add --no-cache \
     libstdc++ \
     ca-certificates \
     postgresql-client \
-    netcat-openbsd
+    netcat-openbsd \
+    nodejs \
+    npm \
+    chromium \
+    chromium-chromedriver \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ttf-freefont
 
 WORKDIR /app
 
@@ -56,6 +65,17 @@ RUN adduser -D -s /bin/sh appuser && \
 COPY --from=builder --chown=appuser:appuser /app/_build/prod/rel/group_deals ./
 COPY --chown=appuser:appuser bin/docker-entrypoint.sh /app/bin/docker-entrypoint.sh
 RUN chmod +x /app/bin/docker-entrypoint.sh
+
+# Copy package.json and install Node.js dependencies for Puppeteer script
+COPY package.json package-lock.json* ./
+COPY scripts/ ./scripts/
+RUN npm ci --only=production && \
+    npm cache clean --force && \
+    chown -R appuser:appuser /app
+
+# Set Puppeteer environment variables to use system Chromium
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 # Switch to non-root user
 USER appuser

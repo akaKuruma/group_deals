@@ -16,6 +16,8 @@ defmodule GroupDeals.Gap.GapProductData do
           parsed_data: map | nil,
           image_paths: list(String.t()) | nil,
           marketing_flag: String.t() | nil,
+          page_fetch_status: :pending | :succeeded | :failed,
+          product_page_url: String.t() | nil,
           inserted_at: DateTime.t(),
           updated_at: DateTime.t()
         }
@@ -29,6 +31,12 @@ defmodule GroupDeals.Gap.GapProductData do
     field :parsed_data, :map
     field :image_paths, {:array, :string}
     field :marketing_flag, :string
+
+    field :page_fetch_status, Ecto.Enum,
+      values: [:pending, :succeeded, :failed],
+      default: :pending
+
+    field :product_page_url, :string
 
     belongs_to :product, GapProduct
     belongs_to :gap_data_fetch, GapDataFetch
@@ -47,7 +55,9 @@ defmodule GroupDeals.Gap.GapProductData do
       :html_file_path,
       :parsed_data,
       :image_paths,
-      :marketing_flag
+      :marketing_flag,
+      :page_fetch_status,
+      :product_page_url
     ])
     |> validate_required([:product_id, :gap_data_fetch_id, :folder_timestamp])
     |> foreign_key_constraint(:product_id)

@@ -13,7 +13,10 @@ defmodule GroupDeals.Gap.DiscountCalculator do
 
   Returns a map with :discount and :second_discount_percentage.
   """
-  @spec calculate_discounts(String.t() | nil) :: %{discount: integer(), second_discount_percentage: integer()}
+  @spec calculate_discounts(String.t() | nil) :: %{
+          discount: integer(),
+          second_discount_percentage: integer()
+        }
   def calculate_discounts(nil), do: %{discount: 20, second_discount_percentage: 0}
   def calculate_discounts(""), do: %{discount: 20, second_discount_percentage: 0}
   def calculate_discounts("null"), do: %{discount: 20, second_discount_percentage: 0}

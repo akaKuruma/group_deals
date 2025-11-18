@@ -10,8 +10,7 @@ defmodule GroupDealsWeb.PagesGroupLive.Show do
     ~H"""
     <Layouts.app flash={@flash}>
       <.header>
-        Pages group {@pages_group.id}
-        <:subtitle>This is a pages_group record from your database.</:subtitle>
+        Pages group {@pages_group.title}
         <:actions>
           <.button navigate={~p"/gap/pages_groups"}>
             <.icon name="hero-arrow-left" />

@@ -2,7 +2,7 @@ defmodule GroupDeals.Gap.FetchCoordinatorTest do
   use GroupDeals.DataCase
 
   alias GroupDeals.Gap.FetchCoordinator
-  alias GroupDeals.Gap.GapDataFetch
+  alias GroupDeals.Gap.GapGroupProductsFetchStatus
 
   import GroupDeals.GapFixtures
 
@@ -10,12 +10,12 @@ defmodule GroupDeals.Gap.FetchCoordinatorTest do
     test "creates a gap_data_fetch and schedules job when no active fetch exists" do
       pages_group = pages_group_fixture()
 
-      assert {:ok, %GapDataFetch{} = gap_data_fetch} = FetchCoordinator.start_fetch(pages_group)
+      assert {:ok, %GapGroupProductsFetchStatus{} = gap_group_products_fetch_status} = FetchCoordinator.start_fetch(pages_group)
 
-      assert gap_data_fetch.pages_group_id == pages_group.id
-      assert gap_data_fetch.status == :pending
-      assert is_binary(gap_data_fetch.folder_timestamp)
-      assert String.length(gap_data_fetch.folder_timestamp) == 14
+      assert gap_group_products_fetch_status.pages_group_id == pages_group.id
+      assert gap_group_products_fetch_status.status == :pending
+      assert is_binary(gap_group_products_fetch_status.folder_timestamp)
+      assert String.length(gap_group_products_fetch_status.folder_timestamp) == 14
 
       # Verify job was scheduled by checking Oban jobs table
       import Ecto.Query
@@ -30,7 +30,7 @@ defmodule GroupDeals.Gap.FetchCoordinatorTest do
         |> Repo.one()
 
       assert job != nil
-      assert job.args["gap_data_fetch_id"] == gap_data_fetch.id
+      assert job.args["gap_data_fetch_id"] == gap_group_products_fetch_status.id
     end
 
     test "returns error when active fetch exists" do
@@ -42,7 +42,7 @@ defmodule GroupDeals.Gap.FetchCoordinatorTest do
 
     test "returns error when running fetch exists" do
       pages_group = pages_group_fixture()
-      gap_data_fetch_fixture(%{pages_group_id: pages_group.id, status: :fetching_product_list})
+      gap_data_fetch_fixture(%{pages_group_id: pages_group.id, status: :processing})
 
       assert {:error, :active_fetch_exists} = FetchCoordinator.start_fetch(pages_group)
     end
@@ -51,22 +51,22 @@ defmodule GroupDeals.Gap.FetchCoordinatorTest do
       pages_group = pages_group_fixture()
       gap_data_fetch_fixture(%{pages_group_id: pages_group.id, status: :failed})
 
-      assert {:ok, %GapDataFetch{}} = FetchCoordinator.start_fetch(pages_group)
+      assert {:ok, %GapGroupProductsFetchStatus{}} = FetchCoordinator.start_fetch(pages_group)
     end
 
     test "allows new fetch when previous fetch is succeeded" do
       pages_group = pages_group_fixture()
       gap_data_fetch_fixture(%{pages_group_id: pages_group.id, status: :succeeded})
 
-      assert {:ok, %GapDataFetch{}} = FetchCoordinator.start_fetch(pages_group)
+      assert {:ok, %GapGroupProductsFetchStatus{}} = FetchCoordinator.start_fetch(pages_group)
     end
 
     test "generates timestamp in correct format" do
       pages_group = pages_group_fixture()
 
-      assert {:ok, %GapDataFetch{} = gap_data_fetch} = FetchCoordinator.start_fetch(pages_group)
+      assert {:ok, %GapGroupProductsFetchStatus{} = gap_group_products_fetch_status} = FetchCoordinator.start_fetch(pages_group)
 
-      timestamp = gap_data_fetch.folder_timestamp
+      timestamp = gap_group_products_fetch_status.folder_timestamp
       assert String.length(timestamp) == 14
       assert String.match?(timestamp, ~r/^\d{14}$/)
     end
@@ -74,10 +74,10 @@ defmodule GroupDeals.Gap.FetchCoordinatorTest do
     test "stores timestamp in gap_data_fetch" do
       pages_group = pages_group_fixture()
 
-      assert {:ok, %GapDataFetch{} = gap_data_fetch} = FetchCoordinator.start_fetch(pages_group)
+      assert {:ok, %GapGroupProductsFetchStatus{} = gap_group_products_fetch_status} = FetchCoordinator.start_fetch(pages_group)
 
-      assert gap_data_fetch.folder_timestamp != nil
-      assert is_binary(gap_data_fetch.folder_timestamp)
+      assert gap_group_products_fetch_status.folder_timestamp != nil
+      assert is_binary(gap_group_products_fetch_status.folder_timestamp)
     end
   end
 end

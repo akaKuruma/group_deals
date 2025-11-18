@@ -13,28 +13,35 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessor do
   Processes all GapPages sequentially, extracting products from JSON responses.
   Returns {:ok, total_product_count} on success or :error on failure.
   """
-  def process_pages(gap_data_fetch, gap_pages, _folder_path) do
+  def process_pages(gap_group_products_fetch_status, gap_pages, _folder_path) do
     total_products =
-      Enum.reduce_while(gap_pages, {gap_data_fetch, 0}, fn gap_page, {current_fetch, acc} ->
+      Enum.reduce_while(gap_pages, {gap_group_products_fetch_status, 0}, fn gap_page, {current_fetch, acc} ->
         case process_page(current_fetch, gap_page) do
           {:ok, product_count} ->
-            # Update processed_pages
-            new_total_products = acc + product_count
+            # Atomically increment product_list_page_succeeded_count
+            Gap.increment_gap_group_products_fetch_status_counter(
+              current_fetch.id,
+              :product_list_page_succeeded_count,
+              1
+            )
 
-            case Gap.update_gap_data_fetch(current_fetch, %{
-                   processed_pages: current_fetch.processed_pages + 1,
-                   total_products: new_total_products
+            # Update products_total (calculated from accumulator)
+            new_total_products = acc + product_count
+            case Gap.update_gap_group_products_fetch_status(current_fetch, %{
+                   products_total: new_total_products
                  }) do
               {:ok, updated_fetch} ->
                 {:cont, {updated_fetch, acc + product_count}}
 
               {:error, changeset} ->
-                Logger.error("Failed to update GapDataFetch: #{inspect(changeset)}")
+                Logger.error("Failed to update GapGroupProductsFetchStatus: #{inspect(changeset)}")
                 mark_as_failed(current_fetch, "Failed to update progress")
                 {:halt, {:error, :update_failed}}
             end
 
           {:error, reason} ->
+            # Increment failed count
+            increment_failed_count(current_fetch)
             mark_as_failed(current_fetch, "Failed to process page: #{inspect(reason)}")
             {:halt, {:error, reason}}
         end
@@ -49,12 +56,12 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessor do
     end
   end
 
-  defp process_page(gap_data_fetch, gap_page) do
+  defp process_page(gap_group_products_fetch_status, gap_page) do
     Logger.info("Processing GapPage: #{gap_page.title} (#{gap_page.api_url})")
 
     case HttpClient.fetch_json_api(gap_page.api_url) do
       {:ok, json_body} ->
-        extract_and_store_products(gap_data_fetch, json_body)
+        extract_and_store_products(gap_group_products_fetch_status, json_body)
 
       {:error, reason} ->
         if Mix.env() != :test,
@@ -64,7 +71,7 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessor do
     end
   end
 
-  defp extract_and_store_products(gap_data_fetch, json_body) do
+  defp extract_and_store_products(gap_group_products_fetch_status, json_body) do
     products =
       case Map.get(json_body, "products") do
         list when is_list(list) -> list
@@ -109,24 +116,14 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessor do
               # Create GapProductData with marketing_flag
               case Gap.create_gap_product_data(%{
                      product_id: gap_product.id,
-                     gap_data_fetch_id: gap_data_fetch.id,
-                     folder_timestamp: gap_data_fetch.folder_timestamp,
+                     gap_group_products_fetch_status_id: gap_group_products_fetch_status.id,
+                     folder_timestamp: gap_group_products_fetch_status.folder_timestamp,
                      api_image_paths: [primary_image_path],
                      marketing_flag: marketing_flag
                    }) do
                 {:ok, gap_product_data} ->
-                  # Increment total_images if image path exists
-                  if primary_image_path != "" do
-                    case Gap.update_gap_data_fetch(gap_data_fetch, %{
-                           total_images: gap_data_fetch.total_images + 1
-                         }) do
-                      {:ok, _} -> :ok
-                      {:error, _} -> :ok
-                    end
-                  end
-
                   # Schedule image download job immediately
-                  schedule_image_download(gap_product_data.id, gap_data_fetch.id)
+                  schedule_image_download(gap_product_data.id, gap_group_products_fetch_status.id)
 
                   color_acc + 1
 
@@ -193,8 +190,17 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessor do
     |> Oban.insert()
   end
 
-  defp mark_as_failed(gap_data_fetch, error_message) do
-    Gap.update_gap_data_fetch(gap_data_fetch, %{
+  defp increment_failed_count(gap_group_products_fetch_status) do
+    # Use atomic increment to prevent race conditions
+    Gap.increment_gap_group_products_fetch_status_counter(
+      gap_group_products_fetch_status.id,
+      :product_list_page_failed_count,
+      1
+    )
+  end
+
+  defp mark_as_failed(gap_group_products_fetch_status, error_message) do
+    Gap.update_gap_group_products_fetch_status(gap_group_products_fetch_status, %{
       status: :failed,
       error_message: error_message
     })

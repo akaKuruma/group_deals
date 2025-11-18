@@ -4,10 +4,10 @@ const fs = require('fs');
 const path = require('path');
 
 async function main() {
-  const gapDataFetchId = process.argv[2];
+  const gapGroupProductsFetchStatusId = process.argv[2];
   
-  if (!gapDataFetchId) {
-    console.error('Usage: node fetch_pages.js <gap_data_fetch_id>');
+  if (!gapGroupProductsFetchStatusId) {
+    console.error('Usage: node fetch_pages.js <gap_group_products_fetch_status_id>');
     process.exit(1);
   }
   
@@ -42,11 +42,11 @@ async function main() {
          gp.product_folder_path
        FROM gap_product_data gpd
        JOIN gap_products gp ON gpd.product_id = gp.id
-       WHERE gpd.gap_data_fetch_id = $1 
+       WHERE gpd.gap_group_products_fetch_status_id = $1 
          AND gpd.page_fetch_status = 'pending'
          AND gpd.product_page_url IS NOT NULL
        ORDER BY gpd.inserted_at ASC`,
-      [gapDataFetchId]
+      [gapGroupProductsFetchStatusId]
     );
     
     const products = result.rows;

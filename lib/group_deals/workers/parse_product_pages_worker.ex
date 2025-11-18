@@ -26,19 +26,19 @@ defmodule GroupDeals.Workers.ParseProductPagesWorker do
         }
       }) do
     # Verify the fetch is still active
-    _gap_data_fetch = Gap.get_active_gap_data_fetch!(gap_data_fetch_id)
+    gap_group_products_fetch_status = Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch_id)
 
     try do
       product_data = Gap.get_gap_product_data!(product_data_id)
 
-      if product_data.gap_data_fetch_id != gap_data_fetch_id do
+      if product_data.gap_group_products_fetch_status_id != gap_data_fetch_id do
         Logger.error(
-          "ProductData #{product_data_id} does not belong to GapDataFetch #{gap_data_fetch_id}"
+          "ProductData #{product_data_id} does not belong to GapGroupProductsFetchStatus #{gap_data_fetch_id}"
         )
 
         {:error, :mismatched_fetch}
       else
-        parse_product_page(product_data, id_store_category)
+        parse_product_page(product_data, gap_group_products_fetch_status, id_store_category)
       end
     rescue
       Ecto.NoResultsError ->
@@ -47,7 +47,7 @@ defmodule GroupDeals.Workers.ParseProductPagesWorker do
     end
   end
 
-  defp parse_product_page(product_data, id_store_category) do
+  defp parse_product_page(product_data, gap_group_products_fetch_status, id_store_category) do
     if is_nil(product_data.html_file_path) do
       Logger.error("ProductData #{product_data.id} has no html_file_path")
       {:error, :missing_html_file_path}
@@ -61,6 +61,8 @@ defmodule GroupDeals.Workers.ParseProductPagesWorker do
           # Update ProductData with parsed data
           case Gap.update_gap_product_data(product_data, %{parsed_data: parsed_data}) do
             {:ok, _updated} ->
+              # Increment parsed count
+              increment_product_page_parsed_count(gap_group_products_fetch_status)
               :ok
 
             {:error, changeset} ->
@@ -76,5 +78,14 @@ defmodule GroupDeals.Workers.ParseProductPagesWorker do
           {:error, {:file_read_error, reason}}
       end
     end
+  end
+
+  defp increment_product_page_parsed_count(gap_group_products_fetch_status) do
+    # Use atomic increment to prevent race conditions with concurrent workers
+    Gap.increment_gap_group_products_fetch_status_counter(
+      gap_group_products_fetch_status.id,
+      :product_page_parsed_count,
+      1
+    )
   end
 end

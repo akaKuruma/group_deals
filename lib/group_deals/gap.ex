@@ -7,7 +7,7 @@ defmodule GroupDeals.Gap do
   alias GroupDeals.Repo
 
   alias GroupDeals.Gap.PagesGroup
-  alias GroupDeals.Gap.GapDataFetch
+  alias GroupDeals.Gap.GapGroupProductsFetchStatus
   alias GroupDeals.Gap.GapProduct
   alias GroupDeals.Gap.GapProductData
 
@@ -22,7 +22,7 @@ defmodule GroupDeals.Gap do
   """
   def list_pages_groups do
     PagesGroup
-    |> preload(:gap_data_fetches)
+    |> preload(:gap_group_products_fetch_statuses)
     |> Repo.all()
   end
 
@@ -42,7 +42,7 @@ defmodule GroupDeals.Gap do
   """
   def get_pages_group!(id) do
     PagesGroup
-    |> preload(:gap_data_fetches)
+    |> preload(:gap_group_products_fetch_statuses)
     |> Repo.get!(id)
   end
 
@@ -223,11 +223,11 @@ defmodule GroupDeals.Gap do
   end
 
   @doc """
-  Gets the active fetch for a pages_group, if one exists.
+  Gets the active fetch status for a pages_group, if one exists.
   Active fetch = status not in [:failed, :succeeded]
   """
-  def get_active_fetch_for_pages_group(pages_group_id) do
-    from(f in GapDataFetch,
+  def get_active_fetch_status_for_pages_group(pages_group_id) do
+    from(f in GapGroupProductsFetchStatus,
       where: f.pages_group_id == ^pages_group_id,
       where: f.status not in [:failed, :succeeded],
       order_by: [desc: f.inserted_at],
@@ -237,28 +237,46 @@ defmodule GroupDeals.Gap do
   end
 
   @doc """
-  Creates a gap_data_fetch.
+  Creates a gap_group_products_fetch_status.
   """
-  def create_gap_data_fetch(attrs) do
-    %GapDataFetch{}
-    |> GapDataFetch.changeset(attrs)
+  def create_gap_group_products_fetch_status(attrs) do
+    %GapGroupProductsFetchStatus{}
+    |> GapGroupProductsFetchStatus.changeset(attrs)
     |> Repo.insert()
   end
 
   @doc """
-  Updates a gap_data_fetch.
+  Updates a gap_group_products_fetch_status.
   """
-  def update_gap_data_fetch(%GapDataFetch{} = gap_data_fetch, attrs) do
-    gap_data_fetch
-    |> GapDataFetch.changeset(attrs)
+  def update_gap_group_products_fetch_status(%GapGroupProductsFetchStatus{} = gap_group_products_fetch_status, attrs) do
+    gap_group_products_fetch_status
+    |> GapGroupProductsFetchStatus.changeset(attrs)
     |> Repo.update()
   end
 
   @doc """
-  Gets a gap_data_fetch.
+  Atomically increments a counter field in gap_group_products_fetch_status.
+  This prevents race conditions when multiple workers update the same counter concurrently.
   """
-  def get_active_gap_data_fetch!(id) do
-    from(f in GapDataFetch,
+  def increment_gap_group_products_fetch_status_counter(gap_group_products_fetch_status_id, field, amount \\ 1) do
+    # Use dynamic field update with inc operator for atomic increment
+    # This prevents race conditions when multiple workers update concurrently
+    query = from(f in GapGroupProductsFetchStatus,
+      where: f.id == ^gap_group_products_fetch_status_id
+    )
+
+    # Ecto expects inc: to be a keyword list [field: value], not a map
+    # [{field, amount}] is already a keyword list when field is an atom
+    Repo.update_all(query, inc: [{field, amount}])
+
+    :ok
+  end
+
+  @doc """
+  Gets a gap_group_products_fetch_status.
+  """
+  def get_active_gap_group_products_fetch_status!(id) do
+    from(f in GapGroupProductsFetchStatus,
       where: f.id == ^id,
       where: f.status not in [:failed, :succeeded],
       limit: 1,
@@ -293,12 +311,12 @@ defmodule GroupDeals.Gap do
   end
 
   @doc """
-  Lists all GapProductData for a given GapDataFetch.
+  Lists all GapProductData for a given GapGroupProductsFetchStatus.
   """
-  def list_gap_product_data_for_fetch(gap_data_fetch_id) do
+  def list_gap_product_data_for_fetch(gap_group_products_fetch_status_id) do
     from(pd in GapProductData,
-      where: pd.gap_data_fetch_id == ^gap_data_fetch_id,
-      preload: [:product, :gap_data_fetch]
+      where: pd.gap_group_products_fetch_status_id == ^gap_group_products_fetch_status_id,
+      preload: [:product, :gap_group_products_fetch_status]
     )
     |> Repo.all()
   end
@@ -309,7 +327,7 @@ defmodule GroupDeals.Gap do
   def get_gap_product_data!(id) do
     GapProductData
     |> Repo.get!(id)
-    |> Repo.preload([:product, :gap_data_fetch])
+    |> Repo.preload([:product, :gap_group_products_fetch_status])
   end
 
   @doc """
@@ -340,31 +358,31 @@ defmodule GroupDeals.Gap do
   end
 
   @doc """
-  Checks if all pages have been fetched for a given GapDataFetch.
+  Checks if all pages have been fetched for a given GapGroupProductsFetchStatus.
   Returns stats about fetch status.
   """
-  def check_page_fetch_completion(gap_data_fetch_id) do
-    base_query = from(pd in GapProductData, where: pd.gap_data_fetch_id == ^gap_data_fetch_id)
+  def check_page_fetch_completion(gap_group_products_fetch_status_id) do
+    base_query = from(pd in GapProductData, where: pd.gap_group_products_fetch_status_id == ^gap_group_products_fetch_status_id)
 
     total = Repo.aggregate(base_query, :count, :id)
 
     pending_query =
       from(pd in GapProductData,
-        where: pd.gap_data_fetch_id == ^gap_data_fetch_id and pd.page_fetch_status == ^:pending
+        where: pd.gap_group_products_fetch_status_id == ^gap_group_products_fetch_status_id and pd.page_fetch_status == ^:pending
       )
 
     pending = Repo.aggregate(pending_query, :count, :id)
 
     succeeded_query =
       from(pd in GapProductData,
-        where: pd.gap_data_fetch_id == ^gap_data_fetch_id and pd.page_fetch_status == ^:succeeded
+        where: pd.gap_group_products_fetch_status_id == ^gap_group_products_fetch_status_id and pd.page_fetch_status == ^:succeeded
       )
 
     succeeded = Repo.aggregate(succeeded_query, :count, :id)
 
     failed_query =
       from(pd in GapProductData,
-        where: pd.gap_data_fetch_id == ^gap_data_fetch_id and pd.page_fetch_status == ^:failed
+        where: pd.gap_group_products_fetch_status_id == ^gap_group_products_fetch_status_id and pd.page_fetch_status == ^:failed
       )
 
     failed = Repo.aggregate(failed_query, :count, :id)
@@ -380,10 +398,10 @@ defmodule GroupDeals.Gap do
   @doc """
   Lists all GapProductData with pending page fetch status.
   """
-  def list_pending_page_fetches(gap_data_fetch_id) do
+  def list_pending_page_fetches(gap_group_products_fetch_status_id) do
     from(pd in GapProductData,
       where:
-        pd.gap_data_fetch_id == ^gap_data_fetch_id and
+        pd.gap_group_products_fetch_status_id == ^gap_group_products_fetch_status_id and
           pd.page_fetch_status == ^:pending,
       preload: [:product]
     )

@@ -7,7 +7,7 @@ defmodule GroupDeals.Workers.DownloadProductImageWorker do
   2. Extracts primary image path from api_image_paths
   3. Checks if image already exists at target path
   4. Downloads image if it doesn't exist
-  5. Updates ProductData and GapDataFetch progress
+  5. Updates ProductData and GapGroupProductsFetchStatus progress
   """
 
   alias GroupDeals.Gap
@@ -28,32 +28,32 @@ defmodule GroupDeals.Workers.DownloadProductImageWorker do
       }) do
     # Verify the fetch is still active
     try do
-      gap_data_fetch = Gap.get_active_gap_data_fetch!(gap_data_fetch_id)
+      gap_group_products_fetch_status = Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch_id)
       product_data = Gap.get_gap_product_data!(product_data_id)
 
-      if product_data.gap_data_fetch_id != gap_data_fetch_id do
+      if product_data.gap_group_products_fetch_status_id != gap_data_fetch_id do
         Logger.error(
-          "ProductData #{product_data_id} does not belong to GapDataFetch #{gap_data_fetch_id}"
+          "ProductData #{product_data_id} does not belong to GapGroupProductsFetchStatus #{gap_data_fetch_id}"
         )
 
         {:error, :mismatched_fetch}
       else
-        download_product_image(product_data, gap_data_fetch)
+        download_product_image(product_data, gap_group_products_fetch_status)
       end
     rescue
       Ecto.NoResultsError ->
-        Logger.error("GapDataFetch or ProductData not found: #{gap_data_fetch_id}/#{product_data_id}")
+        Logger.error("GapGroupProductsFetchStatus or ProductData not found: #{gap_data_fetch_id}/#{product_data_id}")
         {:error, :not_found}
     end
   end
 
-  defp download_product_image(product_data, gap_data_fetch) do
+  defp download_product_image(product_data, gap_group_products_fetch_status) do
     # Extract primary image path from api_image_paths (first element)
     image_path = List.first(product_data.api_image_paths || [])
 
     if image_path == nil or image_path == "" do
-      # No image to download, but still increment processed_images
-      increment_processed_images(gap_data_fetch)
+      # No image to download, but still increment product_image_downloaded_count
+      increment_product_image_downloaded_count(gap_group_products_fetch_status)
       :ok
     else
       # Get cc_id from preloaded product
@@ -71,17 +71,17 @@ defmodule GroupDeals.Workers.DownloadProductImageWorker do
         if File.exists?(target_path) do
           # File exists, update ProductData if needed and increment counter
           update_product_data_if_needed(product_data, target_path)
-          increment_processed_images(gap_data_fetch)
+          increment_product_image_downloaded_count(gap_group_products_fetch_status)
           :ok
         else
           # File doesn't exist, download it
-          download_and_save_image(image_path, target_path, product_data, gap_data_fetch)
+          download_and_save_image(image_path, target_path, product_data, gap_group_products_fetch_status)
         end
       end
     end
   end
 
-  defp download_and_save_image(image_path, target_path, product_data, gap_data_fetch) do
+  defp download_and_save_image(image_path, target_path, product_data, gap_group_products_fetch_status) do
     # Build full image URL
     full_url = build_image_url(image_path)
 
@@ -100,7 +100,7 @@ defmodule GroupDeals.Workers.DownloadProductImageWorker do
                    image_paths: [target_path]
                  }) do
               {:ok, _} ->
-                increment_processed_images(gap_data_fetch)
+                increment_product_image_downloaded_count(gap_group_products_fetch_status)
                 :ok
 
               {:error, changeset} ->
@@ -166,12 +166,12 @@ defmodule GroupDeals.Workers.DownloadProductImageWorker do
     end
   end
 
-  defp increment_processed_images(gap_data_fetch) do
-    case Gap.update_gap_data_fetch(gap_data_fetch, %{
-           processed_images: gap_data_fetch.processed_images + 1
-         }) do
-      {:ok, _} -> :ok
-      {:error, changeset} -> Logger.warning("Failed to increment processed_images: #{inspect(changeset)}")
-    end
+  defp increment_product_image_downloaded_count(gap_group_products_fetch_status) do
+    # Use atomic increment to prevent race conditions with concurrent workers
+    Gap.increment_gap_group_products_fetch_status_counter(
+      gap_group_products_fetch_status.id,
+      :product_image_downloaded_count,
+      1
+    )
   end
 end

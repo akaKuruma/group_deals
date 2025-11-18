@@ -20,15 +20,15 @@ defmodule GroupDeals.Workers.FetchProductPagesWorker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"gap_data_fetch_id" => gap_data_fetch_id}}) do
-    gap_data_fetch = Gap.get_active_gap_data_fetch!(gap_data_fetch_id)
-    pages_group = gap_data_fetch.pages_group
+    gap_group_products_fetch_status = Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch_id)
+    pages_group = gap_group_products_fetch_status.pages_group
 
     # Get first GapPage for URL parameters (all products share same category context)
     gap_page = get_first_gap_page(pages_group.gap_pages)
 
-    # 1. Update status to :fetching_product_page
-    case Gap.update_gap_data_fetch(gap_data_fetch, %{
-           status: :fetching_product_page
+    # 1. Update status to :processing
+    case Gap.update_gap_group_products_fetch_status(gap_group_products_fetch_status, %{
+           status: :processing
          }) do
       {:ok, updated_fetch} ->
         # 2. Process all products - set URLs and start Puppeteer script
@@ -41,15 +41,15 @@ defmodule GroupDeals.Workers.FetchProductPagesWorker do
             if Mix.env() != :test,
               do: Logger.error("Failed to process products: #{inspect(reason)}")
 
-            mark_as_failed(gap_data_fetch, "Failed to process products: #{inspect(reason)}")
+            mark_as_failed(gap_group_products_fetch_status, "Failed to process products: #{inspect(reason)}")
             {:error, reason}
         end
 
       {:error, changeset} ->
         if Mix.env() != :test,
-          do: Logger.error("Failed to update GapDataFetch status: #{inspect(changeset)}")
+          do: Logger.error("Failed to update GapGroupProductsFetchStatus status: #{inspect(changeset)}")
 
-        mark_as_failed(gap_data_fetch, "Failed to update status")
+        mark_as_failed(gap_group_products_fetch_status, "Failed to update status")
         {:error, Gap.traverse_changeset_errors(changeset)}
     end
   end
@@ -57,21 +57,21 @@ defmodule GroupDeals.Workers.FetchProductPagesWorker do
   defp get_first_gap_page([]), do: nil
   defp get_first_gap_page([gap_page | _]), do: gap_page
 
-  defp process_all_products(gap_data_fetch, gap_data_fetch_id, gap_page, pages_group_id) do
+  defp process_all_products(gap_group_products_fetch_status, gap_data_fetch_id, gap_page, pages_group_id) do
     # Get all ProductData records for this fetch
     product_data_list = Gap.list_gap_product_data_for_fetch(gap_data_fetch_id)
 
-    # Set total_products if not already set
+    # Set products_total if not already set
     updated_fetch =
-      if gap_data_fetch.total_products == 0 do
-        case Gap.update_gap_data_fetch(gap_data_fetch, %{
-               total_products: length(product_data_list)
+      if gap_group_products_fetch_status.products_total == 0 do
+        case Gap.update_gap_group_products_fetch_status(gap_group_products_fetch_status, %{
+               products_total: length(product_data_list)
              }) do
           {:ok, fetch} -> fetch
-          {:error, _} -> gap_data_fetch
+          {:error, _} -> gap_group_products_fetch_status
         end
       else
-        gap_data_fetch
+        gap_group_products_fetch_status
       end
 
     # Determine id_store_category from gap_page nav parameter
@@ -127,9 +127,15 @@ defmodule GroupDeals.Workers.FetchProductPagesWorker do
             "/app/scripts/fetch_pages.js"
           end
 
+        # Get database URL from Repo configuration
+        database_url = get_database_url()
+
         # Start script in background (don't wait for completion)
         Task.start(fn ->
-          System.cmd("node", [script_path, gap_data_fetch_id], stderr_to_stdout: true)
+          System.cmd("node", [script_path, gap_data_fetch_id],
+            stderr_to_stdout: true,
+            env: [{"DATABASE_URL", database_url}]
+          )
         end)
 
         Logger.info("Started Puppeteer script for fetch #{gap_data_fetch_id}")
@@ -173,10 +179,33 @@ defmodule GroupDeals.Workers.FetchProductPagesWorker do
 
   defp determine_id_store_category(_), do: 5
 
-  defp mark_as_failed(gap_data_fetch, error_message) do
-    Gap.update_gap_data_fetch(gap_data_fetch, %{
+  defp mark_as_failed(gap_group_products_fetch_status, error_message) do
+    Gap.update_gap_group_products_fetch_status(gap_group_products_fetch_status, %{
       status: :failed,
       error_message: error_message
     })
+  end
+
+  # Gets database URL from Repo configuration
+  # Handles both :url format and individual component format
+  defp get_database_url do
+    repo_config = Application.get_env(:group_deals, GroupDeals.Repo, [])
+
+    case Keyword.get(repo_config, :url) do
+      nil ->
+        # Build URL from individual components (dev/test)
+        username = Keyword.get(repo_config, :username, "postgres")
+        password = Keyword.get(repo_config, :password, "postgres")
+        hostname = Keyword.get(repo_config, :hostname, "localhost")
+        database = Keyword.get(repo_config, :database, "group_deals_dev")
+        port = Keyword.get(repo_config, :port, 5432)
+
+        # Build postgres:// URL (script will convert ecto:// if needed)
+        "postgres://#{username}:#{password}@#{hostname}:#{port}/#{database}"
+
+      url when is_binary(url) ->
+        # URL already configured (prod or if explicitly set)
+        url
+    end
   end
 end

@@ -16,43 +16,42 @@ defmodule GroupDeals.Gap.GapProductPagesHandler do
   Returns `{:ok, count}` on success or `{:error, reason}` on failure.
   """
   def process_products(
-        gap_data_fetch,
+        gap_group_products_fetch_status,
         product_data_list,
         gap_page,
         pages_group_id,
         id_store_category
       ) do
     folder_path =
-      Path.join(["/tmp/gap_site", pages_group_id, gap_data_fetch.folder_timestamp])
+      Path.join(["/tmp/gap_site", pages_group_id, gap_group_products_fetch_status.folder_timestamp])
 
     # Ensure folder exists
     File.mkdir_p!(folder_path)
 
-    Enum.reduce_while(product_data_list, {gap_data_fetch, 0}, fn product_data,
+    Enum.reduce_while(product_data_list, {gap_group_products_fetch_status, 0}, fn product_data,
                                                                  {current_fetch, processed} ->
       case process_product(
              product_data,
              gap_page,
              folder_path,
-             gap_data_fetch.id,
+             gap_group_products_fetch_status.id,
              id_store_category
            ) do
         {:ok, _updated_product_data} ->
-          # Update processed_products counter
-          case Gap.update_gap_data_fetch(current_fetch, %{
-                 processed_products: current_fetch.processed_products + 1
-               }) do
-            {:ok, updated_fetch} ->
-              {:cont, {updated_fetch, processed + 1}}
+          # Update product_page_fetched_count counter atomically
+          Gap.increment_gap_group_products_fetch_status_counter(
+            current_fetch.id,
+            :product_page_fetched_count,
+            1
+          )
 
-            {:error, changeset} ->
-              Logger.error("Failed to update GapDataFetch progress: #{inspect(changeset)}")
-              mark_as_failed(current_fetch, "Failed to update progress")
-              {:halt, {:error, :update_failed}}
-          end
+          # Reload fetch status for next iteration (to get updated counter)
+          updated_fetch = Gap.get_active_gap_group_products_fetch_status!(current_fetch.id)
+          {:cont, {updated_fetch, processed + 1}}
 
         {:error, reason} ->
           Logger.error("Failed to process product #{product_data.id}: #{inspect(reason)}")
+          # Note: Failed product page fetches are tracked via page_fetch_status in GapProductData
           mark_as_failed(current_fetch, "Failed to fetch product page: #{inspect(reason)}")
           {:halt, {:error, reason}}
       end
@@ -124,8 +123,8 @@ defmodule GroupDeals.Gap.GapProductPagesHandler do
     |> Oban.insert()
   end
 
-  defp mark_as_failed(gap_data_fetch, error_message) do
-    Gap.update_gap_data_fetch(gap_data_fetch, %{
+  defp mark_as_failed(gap_group_products_fetch_status, error_message) do
+    Gap.update_gap_group_products_fetch_status(gap_group_products_fetch_status, %{
       status: :failed,
       error_message: error_message
     })

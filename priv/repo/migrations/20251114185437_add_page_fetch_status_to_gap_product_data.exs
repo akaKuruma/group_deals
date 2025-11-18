@@ -7,6 +7,6 @@ defmodule GroupDeals.Repo.Migrations.AddPageFetchStatusToGapProductData do
       add :product_page_url, :string
     end
 
-    create index(:gap_product_data, [:gap_data_fetch_id, :page_fetch_status])
+    create index(:gap_product_data, [:gap_group_products_fetch_status_id, :page_fetch_status])
   end
 end

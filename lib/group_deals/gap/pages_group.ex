@@ -2,13 +2,13 @@ defmodule GroupDeals.Gap.PagesGroup do
   use Ecto.Schema
   import Ecto.Changeset
   alias GroupDeals.Gap.GapPage
-  alias GroupDeals.Gap.GapDataFetch
+  alias GroupDeals.Gap.GapGroupProductsFetchStatus
 
   @type t :: %__MODULE__{
           id: binary,
           title: String.t(),
           gap_pages: list(GapPage.t()),
-          gap_data_fetches: list(GapDataFetch.t()),
+          gap_group_products_fetch_statuses: list(GapGroupProductsFetchStatus.t()),
           inserted_at: DateTime.t(),
           updated_at: DateTime.t()
         }
@@ -19,7 +19,7 @@ defmodule GroupDeals.Gap.PagesGroup do
     field :title, :string
 
     has_many :gap_pages, GapPage
-    has_many :gap_data_fetches, GroupDeals.Gap.GapDataFetch
+    has_many :gap_group_products_fetch_statuses, GroupDeals.Gap.GapGroupProductsFetchStatus
 
     timestamps(type: :utc_datetime)
   end

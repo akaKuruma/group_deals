@@ -2,14 +2,14 @@ defmodule GroupDeals.Gap.GapProductData do
   use Ecto.Schema
   import Ecto.Changeset
   alias GroupDeals.Gap.GapProduct
-  alias GroupDeals.Gap.GapDataFetch
+  alias GroupDeals.Gap.GapGroupProductsFetchStatus
 
   @type t :: %__MODULE__{
           id: binary,
           product_id: binary,
           product: GapProduct.t() | nil,
-          gap_data_fetch_id: binary,
-          gap_data_fetch: GapDataFetch.t() | nil,
+          gap_group_products_fetch_status_id: binary,
+          gap_group_products_fetch_status: GapGroupProductsFetchStatus.t() | nil,
           folder_timestamp: String.t(),
           api_image_paths: list(String.t()),
           html_file_path: String.t() | nil,
@@ -39,7 +39,7 @@ defmodule GroupDeals.Gap.GapProductData do
     field :product_page_url, :string
 
     belongs_to :product, GapProduct
-    belongs_to :gap_data_fetch, GapDataFetch
+    belongs_to :gap_group_products_fetch_status, GapGroupProductsFetchStatus
 
     timestamps(type: :utc_datetime)
   end
@@ -49,7 +49,7 @@ defmodule GroupDeals.Gap.GapProductData do
     gap_product_data
     |> cast(attrs, [
       :product_id,
-      :gap_data_fetch_id,
+      :gap_group_products_fetch_status_id,
       :folder_timestamp,
       :api_image_paths,
       :html_file_path,
@@ -59,8 +59,8 @@ defmodule GroupDeals.Gap.GapProductData do
       :page_fetch_status,
       :product_page_url
     ])
-    |> validate_required([:product_id, :gap_data_fetch_id, :folder_timestamp])
+    |> validate_required([:product_id, :gap_group_products_fetch_status_id, :folder_timestamp])
     |> foreign_key_constraint(:product_id)
-    |> foreign_key_constraint(:gap_data_fetch_id)
+    |> foreign_key_constraint(:gap_group_products_fetch_status_id)
   end
 end

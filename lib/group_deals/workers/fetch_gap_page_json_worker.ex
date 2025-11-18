@@ -18,25 +18,25 @@ defmodule GroupDeals.Workers.FetchGapPageJsonWorker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"gap_data_fetch_id" => gap_data_fetch_id}}) do
-    gap_data_fetch = Gap.get_active_gap_data_fetch!(gap_data_fetch_id)
-    pages_group = gap_data_fetch.pages_group
+    gap_group_products_fetch_status = Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch_id)
+    pages_group = gap_group_products_fetch_status.pages_group
     gap_pages = pages_group.gap_pages
 
     # 1. Create folder structure
-    folder_path = create_folder(pages_group.id, gap_data_fetch.folder_timestamp)
+    folder_path = create_folder(pages_group.id, gap_group_products_fetch_status.folder_timestamp)
 
-    # 2. Update status to :fetching_product_list
-    case Gap.update_gap_data_fetch(gap_data_fetch, %{
-           status: :fetching_product_list,
+    # 2. Update status to :processing
+    case Gap.update_gap_group_products_fetch_status(gap_group_products_fetch_status, %{
+           status: :processing,
            started_at: DateTime.utc_now(),
-           total_pages: length(gap_pages)
+           product_list_page_total: length(gap_pages)
          }) do
       {:ok, updated_fetch} ->
         # 3. Process each GapPage sequentially
         case GapApiProductsJsonProcessor.process_pages(updated_fetch, gap_pages, folder_path) do
           {:ok, _count} ->
             # All pages processed successfully, schedule next job
-            schedule_next_job(gap_data_fetch.id)
+            schedule_next_job(gap_group_products_fetch_status.id)
             :ok
 
           :error ->
@@ -44,13 +44,13 @@ defmodule GroupDeals.Workers.FetchGapPageJsonWorker do
         end
 
       {:error, changeset} ->
-        Logger.error("Failed to update GapDataFetch status: #{inspect(changeset)}")
-        mark_as_failed(gap_data_fetch, "Failed to update status")
+        Logger.error("Failed to update GapGroupProductsFetchStatus status: #{inspect(changeset)}")
+        mark_as_failed(gap_group_products_fetch_status, "Failed to update status")
     end
   end
 
-  defp mark_as_failed(gap_data_fetch, error_message) do
-    Gap.update_gap_data_fetch(gap_data_fetch, %{
+  defp mark_as_failed(gap_group_products_fetch_status, error_message) do
+    Gap.update_gap_group_products_fetch_status(gap_group_products_fetch_status, %{
       status: :failed,
       error_message: error_message
     })

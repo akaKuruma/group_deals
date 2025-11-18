@@ -3,7 +3,7 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessorTest do
 
   alias GroupDeals.Gap
   alias GroupDeals.Gap.GapApiProductsJsonProcessor
-  alias GroupDeals.Gap.GapDataFetch
+  alias GroupDeals.Gap.GapGroupProductsFetchStatus
   alias GroupDeals.Repo
 
   import GroupDeals.GapFixtures
@@ -20,8 +20,8 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessorTest do
       gap_data_fetch =
         gap_data_fetch_fixture(%{
           pages_group_id: pages_group.id,
-          status: :fetching_product_list,
-          total_pages: 1
+          status: :processing,
+          product_list_page_total: 1
         })
 
       gap_page =
@@ -39,7 +39,7 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessorTest do
       |> Ecto.Changeset.change(%{api_url: "http://localhost:#{bypass.port}/api"})
       |> Repo.update!()
 
-      gap_data_fetch = Gap.get_active_gap_data_fetch!(gap_data_fetch.id)
+      gap_data_fetch = Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch.id)
       # Reload gap_page to get updated api_url
       gap_page = Repo.get!(Gap.GapPage, gap_page.id)
       gap_pages = [gap_page]
@@ -48,8 +48,8 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessorTest do
 
       assert result == :error
 
-      # Verify GapDataFetch was marked as failed
-      updated_fetch = Repo.get!(GapDataFetch, gap_data_fetch.id)
+      # Verify GapGroupProductsFetchStatus was marked as failed
+      updated_fetch = Repo.get!(GapGroupProductsFetchStatus, gap_data_fetch.id)
       assert updated_fetch.status == :failed
       assert updated_fetch.error_message =~ "Failed to process page"
     end
@@ -60,8 +60,8 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessorTest do
       gap_data_fetch =
         gap_data_fetch_fixture(%{
           pages_group_id: pages_group.id,
-          status: :fetching_product_list,
-          total_pages: 1
+          status: :processing,
+          product_list_page_total: 1
         })
 
       gap_page =
@@ -80,7 +80,7 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessorTest do
       |> Ecto.Changeset.change(%{api_url: "http://localhost:#{bypass.port}/api"})
       |> Repo.update!()
 
-      gap_data_fetch = Gap.get_active_gap_data_fetch!(gap_data_fetch.id)
+      gap_data_fetch = Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch.id)
       gap_page = Repo.get!(Gap.GapPage, gap_page.id)
       gap_pages = [gap_page]
 
@@ -88,7 +88,7 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessorTest do
 
       assert result == :error
 
-      updated_fetch = Repo.get!(GapDataFetch, gap_data_fetch.id)
+      updated_fetch = Repo.get!(GapGroupProductsFetchStatus, gap_data_fetch.id)
       assert updated_fetch.status == :failed
     end
 
@@ -98,9 +98,9 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessorTest do
       gap_data_fetch =
         gap_data_fetch_fixture(%{
           pages_group_id: pages_group.id,
-          status: :fetching_product_list,
-          total_pages: 1,
-          total_products: 0,
+          status: :processing,
+          product_list_page_total: 1,
+          products_total: 0,
           folder_timestamp: "20241111000000"
         })
 
@@ -123,7 +123,7 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessorTest do
       |> Repo.update!()
 
       # Reload gap_data_fetch to get updated gap_pages
-      gap_data_fetch = Gap.get_active_gap_data_fetch!(gap_data_fetch.id)
+      gap_data_fetch = Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch.id)
       # Reload gap_page to get updated api_url
       gap_page = Repo.get!(Gap.GapPage, gap_page.id)
       # Build gap_pages list with updated gap_page
@@ -134,14 +134,14 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessorTest do
       assert {:ok, 0} = result
 
       # Verify GapDataFetch was updated
-      updated_fetch = Repo.get!(GapDataFetch, gap_data_fetch.id)
-      assert updated_fetch.processed_pages == 1
-      assert updated_fetch.total_products == 0
+      updated_fetch = Repo.get!(GapGroupProductsFetchStatus, gap_data_fetch.id)
+      assert updated_fetch.product_list_page_succeeded_count == 1
+      assert updated_fetch.products_total == 0
 
       # Verify GapDataFetch was updated
-      updated_fetch = Repo.get!(GapDataFetch, gap_data_fetch.id)
-      assert updated_fetch.processed_pages == 1
-      assert updated_fetch.total_products == 0
+      updated_fetch = Repo.get!(GapGroupProductsFetchStatus, gap_data_fetch.id)
+      assert updated_fetch.product_list_page_succeeded_count == 1
+      assert updated_fetch.products_total == 0
     end
 
     test "handles missing products key in JSON", %{bypass: bypass} do
@@ -150,8 +150,8 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessorTest do
       gap_data_fetch =
         gap_data_fetch_fixture(%{
           pages_group_id: pages_group.id,
-          status: :fetching_product_list,
-          total_pages: 1,
+          status: :processing,
+          product_list_page_total: 1,
           folder_timestamp: "20241111000000"
         })
 
@@ -174,7 +174,7 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessorTest do
       |> Repo.update!()
 
       # Reload gap_data_fetch to get updated gap_pages
-      gap_data_fetch = Gap.get_active_gap_data_fetch!(gap_data_fetch.id)
+      gap_data_fetch = Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch.id)
       # Reload gap_page to get updated api_url
       gap_page = Repo.get!(Gap.GapPage, gap_page.id)
       # Build gap_pages list with updated gap_page
@@ -185,9 +185,9 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessorTest do
       assert {:ok, 0} = result
 
       # Verify GapDataFetch was updated
-      updated_fetch = Repo.get!(GapDataFetch, gap_data_fetch.id)
-      assert updated_fetch.processed_pages == 1
-      assert updated_fetch.total_products == 0
+      updated_fetch = Repo.get!(GapGroupProductsFetchStatus, gap_data_fetch.id)
+      assert updated_fetch.product_list_page_succeeded_count == 1
+      assert updated_fetch.products_total == 0
     end
 
     test "handles products with missing styleColors", %{bypass: bypass} do
@@ -196,8 +196,8 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessorTest do
       gap_data_fetch =
         gap_data_fetch_fixture(%{
           pages_group_id: pages_group.id,
-          status: :fetching_product_list,
-          total_pages: 1,
+          status: :processing,
+          product_list_page_total: 1,
           folder_timestamp: "20241111000000"
         })
 
@@ -229,7 +229,7 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessorTest do
       |> Repo.update!()
 
       # Reload gap_data_fetch to get updated gap_pages
-      gap_data_fetch = Gap.get_active_gap_data_fetch!(gap_data_fetch.id)
+      gap_data_fetch = Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch.id)
       # Reload gap_page to get updated api_url
       gap_page = Repo.get!(Gap.GapPage, gap_page.id)
       # Build gap_pages list with updated gap_page
@@ -240,9 +240,9 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessorTest do
       assert {:ok, 0} = result
 
       # Verify GapDataFetch was updated
-      updated_fetch = Repo.get!(GapDataFetch, gap_data_fetch.id)
-      assert updated_fetch.processed_pages == 1
-      assert updated_fetch.total_products == 0
+      updated_fetch = Repo.get!(GapGroupProductsFetchStatus, gap_data_fetch.id)
+      assert updated_fetch.product_list_page_succeeded_count == 1
+      assert updated_fetch.products_total == 0
     end
 
     test "continues processing when GapProductData creation fails due to missing folder_timestamp",
@@ -252,8 +252,8 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessorTest do
       gap_data_fetch =
         gap_data_fetch_fixture(%{
           pages_group_id: pages_group.id,
-          status: :fetching_product_list,
-          total_pages: 1,
+          status: :processing,
+          product_list_page_total: 1,
           # This will cause validation failure
           folder_timestamp: nil
         })
@@ -291,7 +291,7 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessorTest do
       |> Ecto.Changeset.change(%{api_url: "http://localhost:#{bypass.port}/api"})
       |> Repo.update!()
 
-      gap_data_fetch = Gap.get_active_gap_data_fetch!(gap_data_fetch.id)
+      gap_data_fetch = Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch.id)
       gap_page = Repo.get!(Gap.GapPage, gap_page.id)
       gap_pages = [gap_page]
 
@@ -301,12 +301,12 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessorTest do
       # It will return {:ok, 0} because no products were successfully created
       assert {:ok, 0} = result
 
-      # Verify GapDataFetch was updated (processed_pages incremented)
-      updated_fetch = Repo.get!(GapDataFetch, gap_data_fetch.id)
-      assert updated_fetch.processed_pages == 1
-      assert updated_fetch.total_products == 0
-      # Status should still be :fetching_product_list, not :failed
-      assert updated_fetch.status == :fetching_product_list
+      # Verify GapGroupProductsFetchStatus was updated (product_list_page_succeeded_count incremented)
+      updated_fetch = Repo.get!(GapGroupProductsFetchStatus, gap_data_fetch.id)
+      assert updated_fetch.product_list_page_succeeded_count == 1
+      assert updated_fetch.products_total == 0
+      # Status should still be :processing, not :failed
+      assert updated_fetch.status == :processing
     end
   end
 end

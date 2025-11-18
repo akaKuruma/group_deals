@@ -1,7 +1,7 @@
 defmodule GroupDeals.Workers.FetchGapPageJsonWorkerTest do
   use GroupDeals.DataCase
 
-  alias GroupDeals.Gap.GapDataFetch
+  alias GroupDeals.Gap.GapGroupProductsFetchStatus
   alias GroupDeals.Workers.FetchGapPageJsonWorker
   alias GroupDeals.Repo
 
@@ -13,7 +13,7 @@ defmodule GroupDeals.Workers.FetchGapPageJsonWorkerTest do
   end
 
   describe "perform/1 - failure scenarios" do
-    test "raises error when GapDataFetch is not found" do
+    test "raises error when GapGroupProductsFetchStatus is not found" do
       # Create a non-existent gap_data_fetch_id
       fake_id = Ecto.UUID.generate()
 
@@ -64,8 +64,8 @@ defmodule GroupDeals.Workers.FetchGapPageJsonWorkerTest do
 
       assert result == :error
 
-      # Verify GapDataFetch was marked as failed
-      updated_fetch = Repo.get!(GapDataFetch, gap_data_fetch.id)
+      # Verify GapGroupProductsFetchStatus was marked as failed
+      updated_fetch = Repo.get!(GapGroupProductsFetchStatus, gap_data_fetch.id)
       assert updated_fetch.status == :failed
     end
 
@@ -99,7 +99,7 @@ defmodule GroupDeals.Workers.FetchGapPageJsonWorkerTest do
         state: "available"
       }
 
-      folder_path = Path.join(["tmp", "gap_site", pages_group.id, "20241111000000"])
+      folder_path = Path.join(["/tmp", "gap_site", pages_group.id, "20241111000000"])
 
       # Ensure folder doesn't exist
       File.rm_rf(folder_path)
@@ -147,10 +147,10 @@ defmodule GroupDeals.Workers.FetchGapPageJsonWorkerTest do
       FetchGapPageJsonWorker.perform(job)
 
       # Verify status was updated (even though processing failed)
-      updated_fetch = Repo.get!(GapDataFetch, gap_data_fetch.id)
+      updated_fetch = Repo.get!(GapGroupProductsFetchStatus, gap_data_fetch.id)
 
-      # Status might be :fetching_product_list (if update succeeded) or :failed (if processing failed)
-      assert updated_fetch.status in [:fetching_product_list, :failed]
+      # Status might be :processing (if update succeeded) or :failed (if processing failed)
+      assert updated_fetch.status in [:processing, :failed]
     end
   end
 end

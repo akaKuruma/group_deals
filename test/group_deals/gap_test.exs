@@ -144,8 +144,8 @@ defmodule GroupDeals.GapTest do
     end
   end
 
-  describe "gap_data_fetches" do
-    alias GroupDeals.Gap.GapDataFetch
+  describe "gap_group_products_fetch_statuses" do
+    alias GroupDeals.Gap.GapGroupProductsFetchStatus
 
     import GroupDeals.GapFixtures
 
@@ -153,28 +153,28 @@ defmodule GroupDeals.GapTest do
 
     test "get_active_fetch_for_pages_group/1 returns nil when no active fetch exists" do
       pages_group = pages_group_fixture()
-      assert Gap.get_active_fetch_for_pages_group(pages_group.id) == nil
+      assert Gap.get_active_fetch_status_for_pages_group(pages_group.id) == nil
     end
 
     test "get_active_fetch_for_pages_group/1 returns active fetch when one exists" do
       pages_group = pages_group_fixture()
       gap_data_fetch = gap_data_fetch_fixture(%{pages_group_id: pages_group.id, status: :pending})
 
-      assert Gap.get_active_fetch_for_pages_group(pages_group.id).id == gap_data_fetch.id
+      assert Gap.get_active_fetch_status_for_pages_group(pages_group.id).id == gap_data_fetch.id
     end
 
     test "get_active_fetch_for_pages_group/1 returns nil for failed fetch" do
       pages_group = pages_group_fixture()
       gap_data_fetch_fixture(%{pages_group_id: pages_group.id, status: :failed})
 
-      assert Gap.get_active_fetch_for_pages_group(pages_group.id) == nil
+      assert Gap.get_active_fetch_status_for_pages_group(pages_group.id) == nil
     end
 
     test "get_active_fetch_for_pages_group/1 returns nil for succeeded fetch" do
       pages_group = pages_group_fixture()
       gap_data_fetch_fixture(%{pages_group_id: pages_group.id, status: :succeeded})
 
-      assert Gap.get_active_fetch_for_pages_group(pages_group.id) == nil
+      assert Gap.get_active_fetch_status_for_pages_group(pages_group.id) == nil
     end
 
     test "get_active_fetch_for_pages_group/1 returns most recent active fetch" do
@@ -182,7 +182,7 @@ defmodule GroupDeals.GapTest do
       old_fetch = gap_data_fetch_fixture(%{pages_group_id: pages_group.id, status: :failed})
       new_fetch = gap_data_fetch_fixture(%{pages_group_id: pages_group.id, status: :pending})
 
-      active_fetch = Gap.get_active_fetch_for_pages_group(pages_group.id)
+      active_fetch = Gap.get_active_fetch_status_for_pages_group(pages_group.id)
       assert active_fetch.id == new_fetch.id
       refute active_fetch.id == old_fetch.id
     end
@@ -196,14 +196,14 @@ defmodule GroupDeals.GapTest do
         folder_timestamp: "20241111000000"
       }
 
-      assert {:ok, %GapDataFetch{} = gap_data_fetch} = Gap.create_gap_data_fetch(valid_attrs)
-      assert gap_data_fetch.pages_group_id == pages_group.id
-      assert gap_data_fetch.status == :pending
-      assert gap_data_fetch.folder_timestamp == "20241111000000"
+      assert {:ok, %GapGroupProductsFetchStatus{} = gap_group_products_fetch_status} = Gap.create_gap_group_products_fetch_status(valid_attrs)
+      assert gap_group_products_fetch_status.pages_group_id == pages_group.id
+      assert gap_group_products_fetch_status.status == :pending
+      assert gap_group_products_fetch_status.folder_timestamp == "20241111000000"
     end
 
     test "create_gap_data_fetch/1 with invalid data returns error changeset" do
-      assert {:error, %Ecto.Changeset{}} = Gap.create_gap_data_fetch(@invalid_attrs)
+      assert {:error, %Ecto.Changeset{}} = Gap.create_gap_group_products_fetch_status(@invalid_attrs)
     end
 
     test "create_gap_data_fetch/1 enforces unique active fetch per pages_group" do
@@ -216,7 +216,7 @@ defmodule GroupDeals.GapTest do
         folder_timestamp: "20241111000001"
       }
 
-      assert {:error, %Ecto.Changeset{errors: errors}} = Gap.create_gap_data_fetch(attrs)
+      assert {:error, %Ecto.Changeset{errors: errors}} = Gap.create_gap_group_products_fetch_status(attrs)
       assert Keyword.has_key?(errors, :pages_group_id)
       {message, _opts} = Keyword.get(errors, :pages_group_id)
       assert message == "An active fetch already exists for this pages group"
@@ -232,7 +232,7 @@ defmodule GroupDeals.GapTest do
         folder_timestamp: "20241111000001"
       }
 
-      assert {:ok, %GapDataFetch{}} = Gap.create_gap_data_fetch(attrs)
+      assert {:ok, %GapGroupProductsFetchStatus{}} = Gap.create_gap_group_products_fetch_status(attrs)
     end
 
     test "create_gap_data_fetch/1 allows multiple fetches when previous ones are succeeded" do
@@ -245,7 +245,7 @@ defmodule GroupDeals.GapTest do
         folder_timestamp: "20241111000001"
       }
 
-      assert {:ok, %GapDataFetch{}} = Gap.create_gap_data_fetch(attrs)
+      assert {:ok, %GapGroupProductsFetchStatus{}} = Gap.create_gap_group_products_fetch_status(attrs)
     end
 
     test "list_pages_groups/0 preloads gap_data_fetches" do
@@ -253,8 +253,8 @@ defmodule GroupDeals.GapTest do
       gap_data_fetch_fixture(%{pages_group_id: pages_group.id})
 
       [loaded_pages_group] = Gap.list_pages_groups()
-      assert Ecto.assoc_loaded?(loaded_pages_group.gap_data_fetches)
-      assert length(loaded_pages_group.gap_data_fetches) == 1
+      assert Ecto.assoc_loaded?(loaded_pages_group.gap_group_products_fetch_statuses)
+      assert length(loaded_pages_group.gap_group_products_fetch_statuses) == 1
     end
 
     test "get_pages_group!/1 preloads gap_data_fetches" do
@@ -262,8 +262,8 @@ defmodule GroupDeals.GapTest do
       gap_data_fetch_fixture(%{pages_group_id: pages_group.id})
 
       loaded_pages_group = Gap.get_pages_group!(pages_group.id)
-      assert Ecto.assoc_loaded?(loaded_pages_group.gap_data_fetches)
-      assert length(loaded_pages_group.gap_data_fetches) == 1
+      assert Ecto.assoc_loaded?(loaded_pages_group.gap_group_products_fetch_statuses)
+      assert length(loaded_pages_group.gap_group_products_fetch_statuses) == 1
     end
   end
 end

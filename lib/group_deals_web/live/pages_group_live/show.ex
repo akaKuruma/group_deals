@@ -3,7 +3,7 @@ defmodule GroupDealsWeb.PagesGroupLive.Show do
 
   alias GroupDeals.Gap
   alias GroupDeals.Gap.FetchCoordinator
-  alias GroupDeals.Gap.GapDataFetch
+  alias GroupDeals.Gap.GapGroupProductsFetchStatus
 
   @impl true
   def render(assigns) do
@@ -53,7 +53,7 @@ defmodule GroupDealsWeb.PagesGroupLive.Show do
     pages_group = Gap.get_pages_group!(id)
 
     case FetchCoordinator.start_fetch(pages_group) do
-      {:ok, _gap_data_fetch} ->
+      {:ok, _gap_group_products_fetch_status} ->
         {:noreply,
          socket
          |> put_flash(:info, "Fetch process started successfully")
@@ -76,7 +76,7 @@ defmodule GroupDealsWeb.PagesGroupLive.Show do
   end
 
   defp has_active_fetch?(pages_group) do
-    pages_group.gap_data_fetches
-    |> Enum.any?(fn fetch -> GapDataFetch.active_status?(fetch.status) end)
+    pages_group.gap_group_products_fetch_statuses
+    |> Enum.any?(fn fetch -> GapGroupProductsFetchStatus.active_status?(fetch.status) end)
   end
 end

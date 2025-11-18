@@ -1,7 +1,7 @@
 defmodule GroupDeals.Workers.FetchProductPagesWorkerTest do
   use GroupDeals.DataCase
 
-  alias GroupDeals.Gap.GapDataFetch
+  alias GroupDeals.Gap.GapGroupProductsFetchStatus
   alias GroupDeals.Gap.GapProduct
   alias GroupDeals.Gap.GapProductData
   alias GroupDeals.Workers.FetchProductPagesWorker
@@ -49,9 +49,9 @@ defmodule GroupDeals.Workers.FetchProductPagesWorkerTest do
       gap_data_fetch =
         gap_data_fetch_fixture(%{
           pages_group_id: pages_group.id,
-          status: :fetching_product_list,
+          status: :processing,
           folder_timestamp: "20241111000000",
-          total_products: 2
+          products_total: 2
         })
 
       # Create products and product data
@@ -71,18 +71,18 @@ defmodule GroupDeals.Workers.FetchProductPagesWorkerTest do
           cc_name: "Blue"
         })
 
-      {:ok, _product_data1} =
+      {:ok, product_data1} =
         Repo.insert(%GapProductData{
           product_id: product1.id,
-          gap_data_fetch_id: gap_data_fetch.id,
+          gap_group_products_fetch_status_id: gap_data_fetch.id,
           folder_timestamp: gap_data_fetch.folder_timestamp,
           api_image_paths: []
         })
 
-      {:ok, _product_data2} =
+      {:ok, product_data2} =
         Repo.insert(%GapProductData{
           product_id: product2.id,
-          gap_data_fetch_id: gap_data_fetch.id,
+          gap_group_products_fetch_status_id: gap_data_fetch.id,
           folder_timestamp: gap_data_fetch.folder_timestamp,
           api_image_paths: []
         })
@@ -95,7 +95,7 @@ defmodule GroupDeals.Workers.FetchProductPagesWorkerTest do
 
       # Update gap_data_fetch to preload pages_group with gap_pages
       # Reload gap_data_fetch to get preloaded pages_group with gap_pages
-      gap_data_fetch = GroupDeals.Gap.get_active_gap_data_fetch!(gap_data_fetch.id)
+      gap_data_fetch = GroupDeals.Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch.id)
 
       job = %Oban.Job{
         id: 1,
@@ -105,7 +105,7 @@ defmodule GroupDeals.Workers.FetchProductPagesWorkerTest do
         state: "available"
       }
 
-      folder_path = Path.join(["tmp", "gap_site", pages_group.id, "20241111000000"])
+      folder_path = Path.join(["/tmp", "gap_site", pages_group.id, "20241111000000"])
 
       # Ensure folder doesn't exist
       File.rm_rf(folder_path)
@@ -115,29 +115,25 @@ defmodule GroupDeals.Workers.FetchProductPagesWorkerTest do
       assert result == :ok
 
       # Verify status was updated
-      updated_fetch = Repo.get!(GapDataFetch, gap_data_fetch.id)
-      assert updated_fetch.status == :fetching_product_page
+      updated_fetch = Repo.get!(GapGroupProductsFetchStatus, gap_data_fetch.id)
+      assert updated_fetch.status == :processing
 
-      # Verify processed_products counter
-      assert updated_fetch.processed_products == 2
+      # Verify folder was created
+      assert File.exists?(folder_path)
+      assert File.dir?(folder_path)
 
-      # Verify HTML files were created
-      file1_path = Path.join(folder_path, "814031011.html")
-      file2_path = Path.join(folder_path, "814022041.html")
+      # Verify ProductData records were updated with URLs and pending status
+      # (The actual fetching happens asynchronously via Puppeteer, so we don't check counters or HTML files here)
+      updated_product_data1 = Repo.get!(GapProductData, product_data1.id) |> Repo.preload(:product)
+      updated_product_data2 = Repo.get!(GapProductData, product_data2.id) |> Repo.preload(:product)
 
-      assert File.exists?(file1_path)
-      assert File.exists?(file2_path)
+      assert updated_product_data1.product_page_url != nil
+      assert updated_product_data1.page_fetch_status == :pending
+      assert updated_product_data2.product_page_url != nil
+      assert updated_product_data2.page_fetch_status == :pending
 
-      # Verify file contents match what Bypass returned
-      assert File.read!(file1_path) == "<html><body>Product Page HTML</body></html>"
-      assert File.read!(file2_path) == "<html><body>Product Page HTML</body></html>"
-
-      # Verify ProductData records were updated with file paths
-      product_data1 = Repo.get_by!(GapProductData, product_id: product1.id)
-      assert product_data1.html_file_path == file1_path
-
-      product_data2 = Repo.get_by!(GapProductData, product_id: product2.id)
-      assert product_data2.html_file_path == file2_path
+      # Note: HTML files are created by Puppeteer script asynchronously, not by this worker
+      # So we don't check for file existence or html_file_path here
 
       # Cleanup
       File.rm_rf(folder_path)
@@ -160,9 +156,9 @@ defmodule GroupDeals.Workers.FetchProductPagesWorkerTest do
       gap_data_fetch =
         gap_data_fetch_fixture(%{
           pages_group_id: pages_group.id,
-          status: :fetching_product_list,
+          status: :processing,
           folder_timestamp: "20241111000000",
-          total_products: 1
+          products_total: 1
         })
 
       {:ok, product} =
@@ -176,7 +172,7 @@ defmodule GroupDeals.Workers.FetchProductPagesWorkerTest do
       {:ok, _product_data} =
         Repo.insert(%GapProductData{
           product_id: product.id,
-          gap_data_fetch_id: gap_data_fetch.id,
+          gap_group_products_fetch_status_id: gap_data_fetch.id,
           folder_timestamp: gap_data_fetch.folder_timestamp,
           api_image_paths: []
         })
@@ -186,7 +182,7 @@ defmodule GroupDeals.Workers.FetchProductPagesWorkerTest do
       end)
 
       # Reload gap_data_fetch to get preloaded pages_group with gap_pages
-      gap_data_fetch = GroupDeals.Gap.get_active_gap_data_fetch!(gap_data_fetch.id)
+      gap_data_fetch = GroupDeals.Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch.id)
 
       job = %Oban.Job{
         id: 1,
@@ -203,7 +199,7 @@ defmodule GroupDeals.Workers.FetchProductPagesWorkerTest do
       assert result == :ok
 
       # Cleanup
-      folder_path = Path.join(["tmp", "gap_site", pages_group.id, "20241111000000"])
+      folder_path = Path.join(["/tmp", "gap_site", pages_group.id, "20241111000000"])
       File.rm_rf(folder_path)
     end
 
@@ -219,9 +215,9 @@ defmodule GroupDeals.Workers.FetchProductPagesWorkerTest do
       gap_data_fetch =
         gap_data_fetch_fixture(%{
           pages_group_id: pages_group.id,
-          status: :fetching_product_list,
+          status: :processing,
           folder_timestamp: "20241111000000",
-          total_products: 1
+          products_total: 1
         })
 
       {:ok, product} =
@@ -235,7 +231,7 @@ defmodule GroupDeals.Workers.FetchProductPagesWorkerTest do
       {:ok, _product_data} =
         Repo.insert(%GapProductData{
           product_id: product.id,
-          gap_data_fetch_id: gap_data_fetch.id,
+          gap_group_products_fetch_status_id: gap_data_fetch.id,
           folder_timestamp: gap_data_fetch.folder_timestamp,
           api_image_paths: []
         })
@@ -245,7 +241,7 @@ defmodule GroupDeals.Workers.FetchProductPagesWorkerTest do
       end)
 
       # Reload gap_data_fetch to get preloaded pages_group with gap_pages
-      gap_data_fetch = GroupDeals.Gap.get_active_gap_data_fetch!(gap_data_fetch.id)
+      gap_data_fetch = GroupDeals.Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch.id)
 
       job = %Oban.Job{
         id: 1,
@@ -260,13 +256,13 @@ defmodule GroupDeals.Workers.FetchProductPagesWorkerTest do
       assert result == :ok
 
       # Cleanup
-      folder_path = Path.join(["tmp", "gap_site", pages_group.id, "20241111000000"])
+      folder_path = Path.join(["/tmp", "gap_site", pages_group.id, "20241111000000"])
       File.rm_rf(folder_path)
     end
   end
 
   describe "perform/1 - failure scenarios" do
-    test "raises error when GapDataFetch is not found" do
+    test "raises error when GapGroupProductsFetchStatus is not found" do
       fake_id = Ecto.UUID.generate()
 
       job = %Oban.Job{
@@ -317,9 +313,9 @@ defmodule GroupDeals.Workers.FetchProductPagesWorkerTest do
       gap_data_fetch =
         gap_data_fetch_fixture(%{
           pages_group_id: pages_group.id,
-          status: :fetching_product_list,
+          status: :processing,
           folder_timestamp: "20241111000000",
-          total_products: 1
+          products_total: 1
         })
 
       {:ok, product} =
@@ -333,7 +329,7 @@ defmodule GroupDeals.Workers.FetchProductPagesWorkerTest do
       {:ok, _product_data} =
         Repo.insert(%GapProductData{
           product_id: product.id,
-          gap_data_fetch_id: gap_data_fetch.id,
+          gap_group_products_fetch_status_id: gap_data_fetch.id,
           folder_timestamp: gap_data_fetch.folder_timestamp,
           api_image_paths: []
         })
@@ -343,7 +339,7 @@ defmodule GroupDeals.Workers.FetchProductPagesWorkerTest do
       end)
 
       # Reload gap_data_fetch to get preloaded pages_group with gap_pages
-      gap_data_fetch = GroupDeals.Gap.get_active_gap_data_fetch!(gap_data_fetch.id)
+      gap_data_fetch = GroupDeals.Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch.id)
 
       job = %Oban.Job{
         id: 1,
@@ -356,11 +352,11 @@ defmodule GroupDeals.Workers.FetchProductPagesWorkerTest do
       FetchProductPagesWorker.perform(job)
 
       # Verify status was updated
-      updated_fetch = Repo.get!(GapDataFetch, gap_data_fetch.id)
-      assert updated_fetch.status == :fetching_product_page
+      updated_fetch = Repo.get!(GapGroupProductsFetchStatus, gap_data_fetch.id)
+      assert updated_fetch.status == :processing
 
       # Cleanup
-      folder_path = Path.join(["tmp", "gap_site", pages_group.id, "20241111000000"])
+      folder_path = Path.join(["/tmp", "gap_site", pages_group.id, "20241111000000"])
       File.rm_rf(folder_path)
     end
   end

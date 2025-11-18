@@ -4,20 +4,20 @@ defmodule GroupDeals.Gap.FetchCoordinator do
   """
 
   alias GroupDeals.Gap
-  alias GroupDeals.Gap.GapDataFetch
+  alias GroupDeals.Gap.GapGroupProductsFetchStatus
   alias GroupDeals.Workers.FetchGapPageJsonWorker
 
   @doc """
   Starts a new fetch process for a PagesGroup.
 
-  Validates that no active fetch exists, creates the GapDataFetch record,
+  Validates that no active fetch exists, creates the GapGroupProductsFetchStatus record,
   generates a timestamp, and schedules the first Oban job.
 
-  Returns {:ok, gap_data_fetch} or {:error, reason}
+  Returns {:ok, gap_group_products_fetch_status} or {:error, reason}
   """
   def start_fetch(%Gap.PagesGroup{} = pages_group) do
     # Check for active fetch
-    case Gap.get_active_fetch_for_pages_group(pages_group.id) do
+    case Gap.get_active_fetch_status_for_pages_group(pages_group.id) do
       nil ->
         do_start_fetch(pages_group)
 
@@ -26,11 +26,11 @@ defmodule GroupDeals.Gap.FetchCoordinator do
     end
   end
 
-  def finish_fetch(%GapDataFetch{} = gap_data_fetch, attrs) do
+  def finish_fetch(%GapGroupProductsFetchStatus{} = gap_group_products_fetch_status, attrs) do
     attrs = Map.merge(attrs, %{completed_at: DateTime.utc_now()})
 
-    gap_data_fetch
-    |> Gap.update_gap_data_fetch(attrs)
+    gap_group_products_fetch_status
+    |> Gap.update_gap_group_products_fetch_status(attrs)
   end
 
   defp do_start_fetch(pages_group) do
@@ -42,18 +42,18 @@ defmodule GroupDeals.Gap.FetchCoordinator do
       folder_timestamp: timestamp
     }
 
-    case Gap.create_gap_data_fetch(attrs) do
-      {:ok, gap_data_fetch} ->
-        schedule_first_job(gap_data_fetch)
-        {:ok, gap_data_fetch}
+    case Gap.create_gap_group_products_fetch_status(attrs) do
+      {:ok, gap_group_products_fetch_status} ->
+        schedule_first_job(gap_group_products_fetch_status)
+        {:ok, gap_group_products_fetch_status}
 
       {:error, changeset} ->
         {:error, changeset}
     end
   end
 
-  defp schedule_first_job(%GapDataFetch{id: gap_data_fetch_id}) do
-    %{gap_data_fetch_id: gap_data_fetch_id}
+  defp schedule_first_job(%GapGroupProductsFetchStatus{id: gap_group_products_fetch_status_id}) do
+    %{gap_data_fetch_id: gap_group_products_fetch_status_id}
     |> FetchGapPageJsonWorker.new()
     |> Oban.insert()
   end

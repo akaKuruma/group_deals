@@ -280,9 +280,9 @@ defmodule GroupDeals.Gap do
           # Mark as succeeded
           case updated_status
                |> GapGroupProductsFetchStatus.changeset(%{
-                     status: :succeeded,
-                     completed_at: DateTime.utc_now()
-                   })
+                 status: :succeeded,
+                 completed_at: DateTime.utc_now()
+               })
                |> Repo.update() do
             {:ok, completed_status} ->
               do_broadcast_fetch_status_updated(completed_status)
@@ -379,7 +379,8 @@ defmodule GroupDeals.Gap do
             end
         end
 
-      _ -> {:error, :failed_to_increment_counter}
+      _ ->
+        {:error, :failed_to_increment_counter}
     end
   end
 

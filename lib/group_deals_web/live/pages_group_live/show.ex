@@ -46,10 +46,18 @@ defmodule GroupDealsWeb.PagesGroupLive.Show do
 
               <div class="text-sm space-y-1">
                 <div>Progress: {GapGroupProductsFetchStatus.progress_percentage(active_fetch)}%</div>
-                <div>Pages: {active_fetch.product_list_page_succeeded_count}/{active_fetch.product_list_page_total}</div>
-                <div>Products: {active_fetch.product_page_fetched_count}/{active_fetch.products_total}</div>
-                <div>Parsed: {active_fetch.product_page_parsed_count}/{active_fetch.products_total}</div>
-                <div>Images: {active_fetch.product_image_downloaded_count}/{active_fetch.products_total}</div>
+                <div>
+                  Pages: {active_fetch.product_list_page_succeeded_count}/{active_fetch.product_list_page_total}
+                </div>
+                <div>
+                  Products: {active_fetch.product_page_fetched_count}/{active_fetch.products_total}
+                </div>
+                <div>
+                  Parsed: {active_fetch.product_page_parsed_count}/{active_fetch.products_total}
+                </div>
+                <div>
+                  Images: {active_fetch.product_image_downloaded_count}/{active_fetch.products_total}
+                </div>
               </div>
             </div>
           <% end %>

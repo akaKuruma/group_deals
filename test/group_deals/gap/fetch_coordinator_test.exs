@@ -10,7 +10,8 @@ defmodule GroupDeals.Gap.FetchCoordinatorTest do
     test "creates a gap_data_fetch and schedules job when no active fetch exists" do
       pages_group = pages_group_fixture()
 
-      assert {:ok, %GapGroupProductsFetchStatus{} = gap_group_products_fetch_status} = FetchCoordinator.start_fetch(pages_group)
+      assert {:ok, %GapGroupProductsFetchStatus{} = gap_group_products_fetch_status} =
+               FetchCoordinator.start_fetch(pages_group)
 
       assert gap_group_products_fetch_status.pages_group_id == pages_group.id
       assert gap_group_products_fetch_status.status == :pending
@@ -64,7 +65,8 @@ defmodule GroupDeals.Gap.FetchCoordinatorTest do
     test "generates timestamp in correct format" do
       pages_group = pages_group_fixture()
 
-      assert {:ok, %GapGroupProductsFetchStatus{} = gap_group_products_fetch_status} = FetchCoordinator.start_fetch(pages_group)
+      assert {:ok, %GapGroupProductsFetchStatus{} = gap_group_products_fetch_status} =
+               FetchCoordinator.start_fetch(pages_group)
 
       timestamp = gap_group_products_fetch_status.folder_timestamp
       assert String.length(timestamp) == 14
@@ -74,7 +76,8 @@ defmodule GroupDeals.Gap.FetchCoordinatorTest do
     test "stores timestamp in gap_data_fetch" do
       pages_group = pages_group_fixture()
 
-      assert {:ok, %GapGroupProductsFetchStatus{} = gap_group_products_fetch_status} = FetchCoordinator.start_fetch(pages_group)
+      assert {:ok, %GapGroupProductsFetchStatus{} = gap_group_products_fetch_status} =
+               FetchCoordinator.start_fetch(pages_group)
 
       assert gap_group_products_fetch_status.folder_timestamp != nil
       assert is_binary(gap_group_products_fetch_status.folder_timestamp)

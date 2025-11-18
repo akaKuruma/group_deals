@@ -95,7 +95,8 @@ defmodule GroupDeals.Workers.FetchProductPagesWorkerTest do
 
       # Update gap_data_fetch to preload pages_group with gap_pages
       # Reload gap_data_fetch to get preloaded pages_group with gap_pages
-      gap_data_fetch = GroupDeals.Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch.id)
+      gap_data_fetch =
+        GroupDeals.Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch.id)
 
       job = %Oban.Job{
         id: 1,
@@ -124,8 +125,11 @@ defmodule GroupDeals.Workers.FetchProductPagesWorkerTest do
 
       # Verify ProductData records were updated with URLs and pending status
       # (The actual fetching happens asynchronously via Puppeteer, so we don't check counters or HTML files here)
-      updated_product_data1 = Repo.get!(GapProductData, product_data1.id) |> Repo.preload(:product)
-      updated_product_data2 = Repo.get!(GapProductData, product_data2.id) |> Repo.preload(:product)
+      updated_product_data1 =
+        Repo.get!(GapProductData, product_data1.id) |> Repo.preload(:product)
+
+      updated_product_data2 =
+        Repo.get!(GapProductData, product_data2.id) |> Repo.preload(:product)
 
       assert updated_product_data1.product_page_url != nil
       assert updated_product_data1.page_fetch_status == :pending
@@ -182,7 +186,8 @@ defmodule GroupDeals.Workers.FetchProductPagesWorkerTest do
       end)
 
       # Reload gap_data_fetch to get preloaded pages_group with gap_pages
-      gap_data_fetch = GroupDeals.Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch.id)
+      gap_data_fetch =
+        GroupDeals.Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch.id)
 
       job = %Oban.Job{
         id: 1,
@@ -241,7 +246,8 @@ defmodule GroupDeals.Workers.FetchProductPagesWorkerTest do
       end)
 
       # Reload gap_data_fetch to get preloaded pages_group with gap_pages
-      gap_data_fetch = GroupDeals.Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch.id)
+      gap_data_fetch =
+        GroupDeals.Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch.id)
 
       job = %Oban.Job{
         id: 1,
@@ -339,7 +345,8 @@ defmodule GroupDeals.Workers.FetchProductPagesWorkerTest do
       end)
 
       # Reload gap_data_fetch to get preloaded pages_group with gap_pages
-      gap_data_fetch = GroupDeals.Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch.id)
+      gap_data_fetch =
+        GroupDeals.Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch.id)
 
       job = %Oban.Job{
         id: 1,

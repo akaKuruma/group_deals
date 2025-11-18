@@ -18,7 +18,9 @@ defmodule GroupDeals.Workers.FetchGapPageJsonWorker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"gap_data_fetch_id" => gap_data_fetch_id}}) do
-    gap_group_products_fetch_status = Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch_id)
+    gap_group_products_fetch_status =
+      Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch_id)
+
     pages_group = gap_group_products_fetch_status.pages_group
     gap_pages = pages_group.gap_pages
 

@@ -196,14 +196,17 @@ defmodule GroupDeals.GapTest do
         folder_timestamp: "20241111000000"
       }
 
-      assert {:ok, %GapGroupProductsFetchStatus{} = gap_group_products_fetch_status} = Gap.create_gap_group_products_fetch_status(valid_attrs)
+      assert {:ok, %GapGroupProductsFetchStatus{} = gap_group_products_fetch_status} =
+               Gap.create_gap_group_products_fetch_status(valid_attrs)
+
       assert gap_group_products_fetch_status.pages_group_id == pages_group.id
       assert gap_group_products_fetch_status.status == :pending
       assert gap_group_products_fetch_status.folder_timestamp == "20241111000000"
     end
 
     test "create_gap_data_fetch/1 with invalid data returns error changeset" do
-      assert {:error, %Ecto.Changeset{}} = Gap.create_gap_group_products_fetch_status(@invalid_attrs)
+      assert {:error, %Ecto.Changeset{}} =
+               Gap.create_gap_group_products_fetch_status(@invalid_attrs)
     end
 
     test "create_gap_data_fetch/1 enforces unique active fetch per pages_group" do
@@ -216,7 +219,9 @@ defmodule GroupDeals.GapTest do
         folder_timestamp: "20241111000001"
       }
 
-      assert {:error, %Ecto.Changeset{errors: errors}} = Gap.create_gap_group_products_fetch_status(attrs)
+      assert {:error, %Ecto.Changeset{errors: errors}} =
+               Gap.create_gap_group_products_fetch_status(attrs)
+
       assert Keyword.has_key?(errors, :pages_group_id)
       {message, _opts} = Keyword.get(errors, :pages_group_id)
       assert message == "An active fetch already exists for this pages group"
@@ -232,7 +237,8 @@ defmodule GroupDeals.GapTest do
         folder_timestamp: "20241111000001"
       }
 
-      assert {:ok, %GapGroupProductsFetchStatus{}} = Gap.create_gap_group_products_fetch_status(attrs)
+      assert {:ok, %GapGroupProductsFetchStatus{}} =
+               Gap.create_gap_group_products_fetch_status(attrs)
     end
 
     test "create_gap_data_fetch/1 allows multiple fetches when previous ones are succeeded" do
@@ -245,7 +251,8 @@ defmodule GroupDeals.GapTest do
         folder_timestamp: "20241111000001"
       }
 
-      assert {:ok, %GapGroupProductsFetchStatus{}} = Gap.create_gap_group_products_fetch_status(attrs)
+      assert {:ok, %GapGroupProductsFetchStatus{}} =
+               Gap.create_gap_group_products_fetch_status(attrs)
     end
 
     test "list_pages_groups/0 preloads gap_data_fetches" do

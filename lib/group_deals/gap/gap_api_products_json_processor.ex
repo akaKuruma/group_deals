@@ -15,7 +15,8 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessor do
   """
   def process_pages(gap_group_products_fetch_status, gap_pages, _folder_path) do
     total_products =
-      Enum.reduce_while(gap_pages, {gap_group_products_fetch_status, 0}, fn gap_page, {current_fetch, acc} ->
+      Enum.reduce_while(gap_pages, {gap_group_products_fetch_status, 0}, fn gap_page,
+                                                                            {current_fetch, acc} ->
         case process_page(current_fetch, gap_page) do
           {:ok, product_count} ->
             # Atomically increment product_list_page_succeeded_count
@@ -27,6 +28,7 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessor do
 
             # Update products_total (calculated from accumulator)
             new_total_products = acc + product_count
+
             case Gap.update_gap_group_products_fetch_status(current_fetch, %{
                    products_total: new_total_products
                  }) do
@@ -34,7 +36,10 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessor do
                 {:cont, {updated_fetch, acc + product_count}}
 
               {:error, changeset} ->
-                Logger.error("Failed to update GapGroupProductsFetchStatus: #{inspect(changeset)}")
+                Logger.error(
+                  "Failed to update GapGroupProductsFetchStatus: #{inspect(changeset)}"
+                )
+
                 mark_as_failed(current_fetch, "Failed to update progress")
                 {:halt, {:error, :update_failed}}
             end

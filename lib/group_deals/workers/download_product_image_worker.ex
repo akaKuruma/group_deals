@@ -28,7 +28,9 @@ defmodule GroupDeals.Workers.DownloadProductImageWorker do
       }) do
     # Verify the fetch is still active
     try do
-      gap_group_products_fetch_status = Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch_id)
+      gap_group_products_fetch_status =
+        Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch_id)
+
       product_data = Gap.get_gap_product_data!(product_data_id)
 
       if product_data.gap_group_products_fetch_status_id != gap_data_fetch_id do
@@ -42,7 +44,10 @@ defmodule GroupDeals.Workers.DownloadProductImageWorker do
       end
     rescue
       Ecto.NoResultsError ->
-        Logger.error("GapGroupProductsFetchStatus or ProductData not found: #{gap_data_fetch_id}/#{product_data_id}")
+        Logger.error(
+          "GapGroupProductsFetchStatus or ProductData not found: #{gap_data_fetch_id}/#{product_data_id}"
+        )
+
         {:error, :not_found}
     end
   end
@@ -75,13 +80,23 @@ defmodule GroupDeals.Workers.DownloadProductImageWorker do
           :ok
         else
           # File doesn't exist, download it
-          download_and_save_image(image_path, target_path, product_data, gap_group_products_fetch_status)
+          download_and_save_image(
+            image_path,
+            target_path,
+            product_data,
+            gap_group_products_fetch_status
+          )
         end
       end
     end
   end
 
-  defp download_and_save_image(image_path, target_path, product_data, gap_group_products_fetch_status) do
+  defp download_and_save_image(
+         image_path,
+         target_path,
+         product_data,
+         gap_group_products_fetch_status
+       ) do
     # Build full image URL
     full_url = build_image_url(image_path)
 
@@ -158,8 +173,11 @@ defmodule GroupDeals.Workers.DownloadProductImageWorker do
     # Only update if image_paths is nil or empty
     if is_nil(product_data.image_paths) or product_data.image_paths == [] do
       case Gap.update_gap_product_data(product_data, %{image_paths: [target_path]}) do
-        {:ok, _} -> :ok
-        {:error, changeset} -> Logger.warning("Failed to update ProductData: #{inspect(changeset)}")
+        {:ok, _} ->
+          :ok
+
+        {:error, changeset} ->
+          Logger.warning("Failed to update ProductData: #{inspect(changeset)}")
       end
     else
       :ok

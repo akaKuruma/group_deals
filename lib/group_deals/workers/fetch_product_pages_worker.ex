@@ -20,7 +20,9 @@ defmodule GroupDeals.Workers.FetchProductPagesWorker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"gap_data_fetch_id" => gap_data_fetch_id}}) do
-    gap_group_products_fetch_status = Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch_id)
+    gap_group_products_fetch_status =
+      Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch_id)
+
     pages_group = gap_group_products_fetch_status.pages_group
 
     # Get first GapPage for URL parameters (all products share same category context)
@@ -41,13 +43,20 @@ defmodule GroupDeals.Workers.FetchProductPagesWorker do
             if Mix.env() != :test,
               do: Logger.error("Failed to process products: #{inspect(reason)}")
 
-            mark_as_failed(gap_group_products_fetch_status, "Failed to process products: #{inspect(reason)}")
+            mark_as_failed(
+              gap_group_products_fetch_status,
+              "Failed to process products: #{inspect(reason)}"
+            )
+
             {:error, reason}
         end
 
       {:error, changeset} ->
         if Mix.env() != :test,
-          do: Logger.error("Failed to update GapGroupProductsFetchStatus status: #{inspect(changeset)}")
+          do:
+            Logger.error(
+              "Failed to update GapGroupProductsFetchStatus status: #{inspect(changeset)}"
+            )
 
         mark_as_failed(gap_group_products_fetch_status, "Failed to update status")
         {:error, Gap.traverse_changeset_errors(changeset)}
@@ -57,7 +66,12 @@ defmodule GroupDeals.Workers.FetchProductPagesWorker do
   defp get_first_gap_page([]), do: nil
   defp get_first_gap_page([gap_page | _]), do: gap_page
 
-  defp process_all_products(gap_group_products_fetch_status, gap_data_fetch_id, gap_page, pages_group_id) do
+  defp process_all_products(
+         gap_group_products_fetch_status,
+         gap_data_fetch_id,
+         gap_page,
+         pages_group_id
+       ) do
     # Get all ProductData records for this fetch
     product_data_list = Gap.list_gap_product_data_for_fetch(gap_data_fetch_id)
 

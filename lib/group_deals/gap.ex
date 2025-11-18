@@ -11,6 +11,8 @@ defmodule GroupDeals.Gap do
   alias GroupDeals.Gap.GapProduct
   alias GroupDeals.Gap.GapProductData
 
+  require Logger
+
   @doc """
   Returns the list of pages_groups.
 
@@ -247,29 +249,138 @@ defmodule GroupDeals.Gap do
 
   @doc """
   Updates a gap_group_products_fetch_status.
+  After updating, checks if the process is finished and updates status to :succeeded if so.
+
+  Note: We only check for completion if products_total > 0 or if we're updating
+  product-related counters. This prevents marking as succeeded too early when
+  products_total is being set to 0 during initial processing.
   """
-  def update_gap_group_products_fetch_status(%GapGroupProductsFetchStatus{} = gap_group_products_fetch_status, attrs) do
-    gap_group_products_fetch_status
-    |> GapGroupProductsFetchStatus.changeset(attrs)
-    |> Repo.update()
+  def update_gap_group_products_fetch_status(
+        %GapGroupProductsFetchStatus{} = gap_group_products_fetch_status,
+        attrs
+      ) do
+    case gap_group_products_fetch_status
+         |> GapGroupProductsFetchStatus.changeset(attrs)
+         |> Repo.update() do
+      {:ok, updated_status} ->
+        # Only check for completion if:
+        # 1. products_total > 0 (we have products to process), OR
+        # 2. We're updating product-related counters (fetched, parsed, downloaded)
+        # This prevents marking as succeeded too early when products_total is 0
+        should_check_completion =
+          updated_status.products_total > 0 or
+            Map.has_key?(attrs, :product_page_fetched_count) or
+            Map.has_key?(attrs, :product_page_parsed_count) or
+            Map.has_key?(attrs, :product_image_downloaded_count)
+
+        # Check if finished and update status if needed
+        if should_check_completion and
+             GapGroupProductsFetchStatus.finished?(updated_status) and
+             updated_status.status == :processing do
+          # Mark as succeeded
+          case updated_status
+               |> GapGroupProductsFetchStatus.changeset(%{
+                     status: :succeeded,
+                     completed_at: DateTime.utc_now()
+                   })
+               |> Repo.update() do
+            {:ok, completed_status} ->
+              do_broadcast_fetch_status_updated(completed_status)
+              {:ok, completed_status}
+
+            {:error, changeset} ->
+              Logger.error("Failed to mark as succeeded: #{inspect(changeset)}")
+              do_broadcast_fetch_status_updated(updated_status)
+              {:ok, updated_status}
+          end
+        else
+          do_broadcast_fetch_status_updated(updated_status)
+          {:ok, updated_status}
+        end
+
+      error ->
+        error
+    end
+  end
+
+  defp do_broadcast_fetch_status_updated(%GapGroupProductsFetchStatus{} = updated_status) do
+    Phoenix.PubSub.broadcast(
+      GroupDeals.PubSub,
+      "pages_group:#{updated_status.pages_group_id}:fetch_status",
+      {:fetch_status_updated, updated_status}
+    )
   end
 
   @doc """
   Atomically increments a counter field in gap_group_products_fetch_status.
   This prevents race conditions when multiple workers update the same counter concurrently.
+
+  After incrementing, checks if the process is finished and updates status to :succeeded if so.
+
+  Note: We only check for completion if products_total > 0 or if we're incrementing
+  product-related counters. This prevents marking as succeeded too early when
+  products_total is 0 during initial processing.
   """
-  def increment_gap_group_products_fetch_status_counter(gap_group_products_fetch_status_id, field, amount \\ 1) do
+  def increment_gap_group_products_fetch_status_counter(
+        gap_group_products_fetch_status_id,
+        field,
+        amount \\ 1
+      ) do
     # Use dynamic field update with inc operator for atomic increment
     # This prevents race conditions when multiple workers update concurrently
-    query = from(f in GapGroupProductsFetchStatus,
-      where: f.id == ^gap_group_products_fetch_status_id
-    )
+    query =
+      from(f in GapGroupProductsFetchStatus,
+        where: f.id == ^gap_group_products_fetch_status_id
+      )
 
     # Ecto expects inc: to be a keyword list [field: value], not a map
     # [{field, amount}] is already a keyword list when field is an atom
-    Repo.update_all(query, inc: [{field, amount}])
+    case Repo.update_all(query, inc: [{field, amount}]) do
+      {1, _} ->
+        # Reload the full record to check if finished
+        case Repo.get(GapGroupProductsFetchStatus, gap_group_products_fetch_status_id) do
+          nil ->
+            {:error, :not_found}
 
-    :ok
+          full_status ->
+            # Only check for completion if:
+            # 1. products_total > 0 (we have products to process), OR
+            # 2. We're incrementing product-related counters (fetched, parsed, downloaded)
+            # This prevents marking as succeeded too early when products_total is 0
+            is_product_counter =
+              field in [
+                :product_page_fetched_count,
+                :product_page_parsed_count,
+                :product_image_downloaded_count
+              ]
+
+            should_check_completion = full_status.products_total > 0 or is_product_counter
+
+            # Check if finished and update status if needed
+            if should_check_completion and
+                 GapGroupProductsFetchStatus.finished?(full_status) and
+                 full_status.status == :processing do
+              # Mark as succeeded
+              case update_gap_group_products_fetch_status(full_status, %{
+                     status: :succeeded,
+                     completed_at: DateTime.utc_now()
+                   }) do
+                {:ok, completed_status} ->
+                  {:ok, completed_status}
+
+                {:error, changeset} ->
+                  Logger.error("Failed to mark as succeeded: #{inspect(changeset)}")
+                  do_broadcast_fetch_status_updated(full_status)
+                  {:ok, full_status}
+              end
+            else
+              do_broadcast_fetch_status_updated(full_status)
+              {:ok, full_status}
+            end
+        end
+
+      _ -> {:error, :failed_to_increment_counter}
+    end
   end
 
   @doc """
@@ -362,27 +473,36 @@ defmodule GroupDeals.Gap do
   Returns stats about fetch status.
   """
   def check_page_fetch_completion(gap_group_products_fetch_status_id) do
-    base_query = from(pd in GapProductData, where: pd.gap_group_products_fetch_status_id == ^gap_group_products_fetch_status_id)
+    base_query =
+      from(pd in GapProductData,
+        where: pd.gap_group_products_fetch_status_id == ^gap_group_products_fetch_status_id
+      )
 
     total = Repo.aggregate(base_query, :count, :id)
 
     pending_query =
       from(pd in GapProductData,
-        where: pd.gap_group_products_fetch_status_id == ^gap_group_products_fetch_status_id and pd.page_fetch_status == ^:pending
+        where:
+          pd.gap_group_products_fetch_status_id == ^gap_group_products_fetch_status_id and
+            pd.page_fetch_status == ^:pending
       )
 
     pending = Repo.aggregate(pending_query, :count, :id)
 
     succeeded_query =
       from(pd in GapProductData,
-        where: pd.gap_group_products_fetch_status_id == ^gap_group_products_fetch_status_id and pd.page_fetch_status == ^:succeeded
+        where:
+          pd.gap_group_products_fetch_status_id == ^gap_group_products_fetch_status_id and
+            pd.page_fetch_status == ^:succeeded
       )
 
     succeeded = Repo.aggregate(succeeded_query, :count, :id)
 
     failed_query =
       from(pd in GapProductData,
-        where: pd.gap_group_products_fetch_status_id == ^gap_group_products_fetch_status_id and pd.page_fetch_status == ^:failed
+        where:
+          pd.gap_group_products_fetch_status_id == ^gap_group_products_fetch_status_id and
+            pd.page_fetch_status == ^:failed
       )
 
     failed = Repo.aggregate(failed_query, :count, :id)

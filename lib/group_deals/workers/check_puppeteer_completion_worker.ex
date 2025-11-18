@@ -18,7 +18,8 @@ defmodule GroupDeals.Workers.CheckPuppeteerCompletionWorker do
         }
       }) do
     # Get the fetch status record
-    gap_group_products_fetch_status = Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch_id)
+    gap_group_products_fetch_status =
+      Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch_id)
 
     case Gap.check_page_fetch_completion(gap_data_fetch_id) do
       %{pending: 0} = stats ->
@@ -50,7 +51,10 @@ defmodule GroupDeals.Workers.CheckPuppeteerCompletionWorker do
                  product_page_fetched_count: total_fetched
                }) do
             {:ok, _updated} ->
-              Logger.info("Still #{pending} pages pending for fetch #{gap_data_fetch_id}, #{total_fetched} completed")
+              Logger.info(
+                "Still #{pending} pages pending for fetch #{gap_data_fetch_id}, #{total_fetched} completed"
+              )
+
             {:error, changeset} ->
               Logger.warning("Failed to update progress counter: #{inspect(changeset)}")
           end

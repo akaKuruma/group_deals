@@ -26,7 +26,8 @@ defmodule GroupDeals.Workers.ParseProductPagesWorker do
         }
       }) do
     # Verify the fetch is still active
-    gap_group_products_fetch_status = Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch_id)
+    gap_group_products_fetch_status =
+      Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch_id)
 
     try do
       product_data = Gap.get_gap_product_data!(product_data_id)

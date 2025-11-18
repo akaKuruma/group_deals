@@ -100,7 +100,7 @@ defmodule GroupDeals.Gap.GapGroupProductsFetchStatus do
       }) do
     if total > 0 do
       processed = succeeded + failed
-      round((processed / total) * 100)
+      round(processed / total * 100)
     else
       0
     end
@@ -120,8 +120,11 @@ defmodule GroupDeals.Gap.GapGroupProductsFetchStatus do
         product_page_parsed_count: parsed_count,
         product_image_downloaded_count: image_count
       }) do
-    pages_complete = (page_succeeded + page_failed) >= page_total
-    products_complete = fetched_count >= products_total and parsed_count >= products_total and image_count >= products_total
+    pages_complete = page_succeeded + page_failed >= page_total
+
+    products_complete =
+      fetched_count >= products_total and parsed_count >= products_total and
+        image_count >= products_total
 
     pages_complete and products_complete
   end

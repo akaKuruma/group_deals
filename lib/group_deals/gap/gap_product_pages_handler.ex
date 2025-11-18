@@ -23,13 +23,18 @@ defmodule GroupDeals.Gap.GapProductPagesHandler do
         id_store_category
       ) do
     folder_path =
-      Path.join(["/tmp/gap_site", pages_group_id, gap_group_products_fetch_status.folder_timestamp])
+      Path.join([
+        "/tmp/gap_site",
+        pages_group_id,
+        gap_group_products_fetch_status.folder_timestamp
+      ])
 
     # Ensure folder exists
     File.mkdir_p!(folder_path)
 
     Enum.reduce_while(product_data_list, {gap_group_products_fetch_status, 0}, fn product_data,
-                                                                 {current_fetch, processed} ->
+                                                                                  {current_fetch,
+                                                                                   processed} ->
       case process_product(
              product_data,
              gap_page,

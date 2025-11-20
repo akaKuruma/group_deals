@@ -148,13 +148,15 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessor do
   end
 
   # Extracts marketing flag from ccLevelMarketingFlags array
-  # Returns the first flag's content, or empty string if none found
+  # Combines all flags' content into a single string for discount calculation
   defp extract_marketing_flag(style_color) do
     case Map.get(style_color, "ccLevelMarketingFlags") do
       flags when is_list(flags) and length(flags) > 0 ->
-        # Get the first flag's content
-        first_flag = List.first(flags)
-        Map.get(first_flag, "content", "")
+        # Extract all flag contents and combine them
+        flags
+        |> Enum.map(&Map.get(&1, "content", ""))
+        |> Enum.filter(&(&1 != ""))
+        |> Enum.join(". ")
 
       _ ->
         ""

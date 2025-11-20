@@ -17,28 +17,33 @@ defmodule GroupDeals.Gap.DiscountCalculator do
           discount: integer(),
           second_discount_percentage: integer()
         }
-  def calculate_discounts(nil), do: %{discount: 20, second_discount_percentage: 0}
-  def calculate_discounts(""), do: %{discount: 20, second_discount_percentage: 0}
-  def calculate_discounts("null"), do: %{discount: 20, second_discount_percentage: 0}
+  def calculate_discounts(nil), do: %{discount: 0, second_discount_percentage: 0}
+  def calculate_discounts(""), do: %{discount: 0, second_discount_percentage: 0}
+  def calculate_discounts("null"), do: %{discount: 0, second_discount_percentage: 0}
 
   def calculate_discounts(marketing_flag) when is_binary(marketing_flag) do
     cond do
-      String.contains?(marketing_flag, "Final sale. Extra 50% off. Applied at checkout") ->
-        %{discount: 50, second_discount_percentage: 20}
+      # Check for "Extra X% off" pattern (e.g., "Extra 50% off", "Extra 60% off")
+      Regex.match?(~r/Extra\s+(\d+)%\s+off/i, marketing_flag) ->
+        # Extract the percentage number
+        case Regex.run(~r/Extra\s+(\d+)%\s+off/i, marketing_flag) do
+          [_, percentage_str] ->
+            discount = String.to_integer(percentage_str)
+            %{discount: discount, second_discount_percentage: 20}
 
-      String.contains?(marketing_flag, "Extra 50% off. Applied at checkout") ->
-        %{discount: 50, second_discount_percentage: 20}
+          _ ->
+            %{discount: 0, second_discount_percentage: 0}
+        end
 
+      # Check for "Friends & Family deal"
       String.contains?(marketing_flag, "Friends & Family deal") ->
         %{discount: 20, second_discount_percentage: 0}
 
-      String.contains?(marketing_flag, "Featured style! Price as marked") ->
-        %{discount: 0, second_discount_percentage: 0}
-
+      # Default case
       true ->
         %{discount: 0, second_discount_percentage: 0}
     end
   end
 
-  def calculate_discounts(_), do: %{discount: 20, second_discount_percentage: 0}
+  def calculate_discounts(_), do: %{discount: 0, second_discount_percentage: 0}
 end

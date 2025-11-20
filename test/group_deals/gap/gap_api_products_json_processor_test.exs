@@ -309,4 +309,288 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessorTest do
       assert updated_fetch.status == :processing
     end
   end
+
+  describe "process_pages/3 - marketing flag extraction" do
+    test "extracts single marketing flag from ccLevelMarketingFlags", %{bypass: bypass} do
+      pages_group = pages_group_fixture()
+
+      gap_data_fetch =
+        gap_data_fetch_fixture(%{
+          pages_group_id: pages_group.id,
+          status: :processing,
+          product_list_page_total: 1,
+          folder_timestamp: "20241111000000"
+        })
+
+      gap_page = gap_page_fixture(%{pages_group_id: pages_group.id})
+
+      json_body = %{
+        "products" => [
+          %{
+            "styleId" => "123",
+            "styleName" => "Test Product",
+            "styleColors" => [
+              %{
+                "ccId" => "456",
+                "ccName" => "Red",
+                "images" => [
+                  %{"type" => "P01", "path" => "/test/image.jpg", "position" => 1}
+                ],
+                "ccLevelMarketingFlags" => [
+                  %{"content" => "Final sale", "position" => "1"}
+                ]
+              }
+            ]
+          }
+        ]
+      }
+
+      json_string = Jason.encode!(json_body)
+
+      Bypass.stub(bypass, "GET", "/api", fn conn ->
+        Plug.Conn.put_resp_content_type(conn, "application/json")
+        |> Plug.Conn.resp(200, json_string)
+      end)
+
+      gap_page
+      |> Ecto.Changeset.change(%{api_url: "http://localhost:#{bypass.port}/api"})
+      |> Repo.update!()
+
+      gap_data_fetch = Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch.id)
+      gap_page = Repo.get!(Gap.GapPage, gap_page.id)
+      gap_pages = [gap_page]
+
+      result = GapApiProductsJsonProcessor.process_pages(gap_data_fetch, gap_pages, "tmp/test")
+
+      assert {:ok, 1} = result
+
+      # Verify marketing flag was extracted
+      gap_product = Repo.get_by!(Gap.GapProduct, cc_id: "456")
+
+      gap_product_data =
+        Repo.one!(
+          from(pd in Gap.GapProductData,
+            where:
+              pd.product_id == ^gap_product.id and
+                pd.gap_group_products_fetch_status_id == ^gap_data_fetch.id,
+            order_by: [desc: pd.inserted_at],
+            limit: 1
+          )
+        )
+
+      assert gap_product_data.marketing_flag == "Final sale"
+    end
+
+    test "combines multiple marketing flags with periods", %{bypass: bypass} do
+      pages_group = pages_group_fixture()
+
+      gap_data_fetch =
+        gap_data_fetch_fixture(%{
+          pages_group_id: pages_group.id,
+          status: :processing,
+          product_list_page_total: 1,
+          folder_timestamp: "20241111000000"
+        })
+
+      gap_page = gap_page_fixture(%{pages_group_id: pages_group.id})
+
+      json_body = %{
+        "products" => [
+          %{
+            "styleId" => "123",
+            "styleName" => "Test Product",
+            "styleColors" => [
+              %{
+                "ccId" => "789",
+                "ccName" => "Blue",
+                "images" => [
+                  %{"type" => "P01", "path" => "/test/image2.jpg", "position" => 1}
+                ],
+                "ccLevelMarketingFlags" => [
+                  %{"content" => "Final sale", "position" => "1"},
+                  %{"content" => "Extra 50% off. Applied at checkout", "position" => "9"}
+                ]
+              }
+            ]
+          }
+        ]
+      }
+
+      json_string = Jason.encode!(json_body)
+
+      Bypass.stub(bypass, "GET", "/api", fn conn ->
+        Plug.Conn.put_resp_content_type(conn, "application/json")
+        |> Plug.Conn.resp(200, json_string)
+      end)
+
+      gap_page
+      |> Ecto.Changeset.change(%{api_url: "http://localhost:#{bypass.port}/api"})
+      |> Repo.update!()
+
+      gap_data_fetch = Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch.id)
+      gap_page = Repo.get!(Gap.GapPage, gap_page.id)
+      gap_pages = [gap_page]
+
+      result = GapApiProductsJsonProcessor.process_pages(gap_data_fetch, gap_pages, "tmp/test")
+
+      assert {:ok, 1} = result
+
+      # Verify marketing flags were combined
+      gap_product = Repo.get_by!(Gap.GapProduct, cc_id: "789")
+
+      gap_product_data =
+        Repo.one!(
+          from(pd in Gap.GapProductData,
+            where:
+              pd.product_id == ^gap_product.id and
+                pd.gap_group_products_fetch_status_id == ^gap_data_fetch.id,
+            order_by: [desc: pd.inserted_at],
+            limit: 1
+          )
+        )
+
+      assert gap_product_data.marketing_flag == "Final sale. Extra 50% off. Applied at checkout"
+    end
+
+    test "filters out empty marketing flag content", %{bypass: bypass} do
+      pages_group = pages_group_fixture()
+
+      gap_data_fetch =
+        gap_data_fetch_fixture(%{
+          pages_group_id: pages_group.id,
+          status: :processing,
+          product_list_page_total: 1,
+          folder_timestamp: "20241111000000"
+        })
+
+      gap_page = gap_page_fixture(%{pages_group_id: pages_group.id})
+
+      json_body = %{
+        "products" => [
+          %{
+            "styleId" => "123",
+            "styleName" => "Test Product",
+            "styleColors" => [
+              %{
+                "ccId" => "999",
+                "ccName" => "Green",
+                "images" => [
+                  %{"type" => "P01", "path" => "/test/image3.jpg", "position" => 1}
+                ],
+                "ccLevelMarketingFlags" => [
+                  %{"content" => "", "position" => "1"},
+                  %{"content" => "Friends & Family deal", "position" => "2"},
+                  %{"content" => "", "position" => "3"}
+                ]
+              }
+            ]
+          }
+        ]
+      }
+
+      json_string = Jason.encode!(json_body)
+
+      Bypass.stub(bypass, "GET", "/api", fn conn ->
+        Plug.Conn.put_resp_content_type(conn, "application/json")
+        |> Plug.Conn.resp(200, json_string)
+      end)
+
+      gap_page
+      |> Ecto.Changeset.change(%{api_url: "http://localhost:#{bypass.port}/api"})
+      |> Repo.update!()
+
+      gap_data_fetch = Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch.id)
+      gap_page = Repo.get!(Gap.GapPage, gap_page.id)
+      gap_pages = [gap_page]
+
+      result = GapApiProductsJsonProcessor.process_pages(gap_data_fetch, gap_pages, "tmp/test")
+
+      assert {:ok, 1} = result
+
+      # Verify empty flags were filtered out
+      gap_product = Repo.get_by!(Gap.GapProduct, cc_id: "999")
+
+      gap_product_data =
+        Repo.one!(
+          from(pd in Gap.GapProductData,
+            where:
+              pd.product_id == ^gap_product.id and
+                pd.gap_group_products_fetch_status_id == ^gap_data_fetch.id,
+            order_by: [desc: pd.inserted_at],
+            limit: 1
+          )
+        )
+
+      assert gap_product_data.marketing_flag == "Friends & Family deal"
+    end
+
+    test "handles missing ccLevelMarketingFlags array", %{bypass: bypass} do
+      pages_group = pages_group_fixture()
+
+      gap_data_fetch =
+        gap_data_fetch_fixture(%{
+          pages_group_id: pages_group.id,
+          status: :processing,
+          product_list_page_total: 1,
+          folder_timestamp: "20241111000000"
+        })
+
+      gap_page = gap_page_fixture(%{pages_group_id: pages_group.id})
+
+      json_body = %{
+        "products" => [
+          %{
+            "styleId" => "123",
+            "styleName" => "Test Product",
+            "styleColors" => [
+              %{
+                "ccId" => "888",
+                "ccName" => "Yellow",
+                "images" => [
+                  %{"type" => "P01", "path" => "/test/image4.jpg", "position" => 1}
+                ]
+                # Missing ccLevelMarketingFlags
+              }
+            ]
+          }
+        ]
+      }
+
+      json_string = Jason.encode!(json_body)
+
+      Bypass.stub(bypass, "GET", "/api", fn conn ->
+        Plug.Conn.put_resp_content_type(conn, "application/json")
+        |> Plug.Conn.resp(200, json_string)
+      end)
+
+      gap_page
+      |> Ecto.Changeset.change(%{api_url: "http://localhost:#{bypass.port}/api"})
+      |> Repo.update!()
+
+      gap_data_fetch = Gap.get_active_gap_group_products_fetch_status!(gap_data_fetch.id)
+      gap_page = Repo.get!(Gap.GapPage, gap_page.id)
+      gap_pages = [gap_page]
+
+      result = GapApiProductsJsonProcessor.process_pages(gap_data_fetch, gap_pages, "tmp/test")
+
+      assert {:ok, 1} = result
+
+      # Verify marketing flag is empty string (or nil when stored in DB)
+      gap_product = Repo.get_by!(Gap.GapProduct, cc_id: "888")
+
+      gap_product_data =
+        Repo.one!(
+          from(pd in Gap.GapProductData,
+            where:
+              pd.product_id == ^gap_product.id and
+                pd.gap_group_products_fetch_status_id == ^gap_data_fetch.id,
+            order_by: [desc: pd.inserted_at],
+            limit: 1
+          )
+        )
+
+      # Empty string is stored as nil in database
+      assert gap_product_data.marketing_flag in ["", nil]
+    end
+  end
 end

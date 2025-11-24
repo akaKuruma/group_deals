@@ -11,7 +11,7 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessor do
 
   @doc """
   Processes all GapPages sequentially, extracting products from JSON responses.
-  Returns {:ok, total_product_count} on success or :error on failure.
+  Returns {:ok, total_product_count} on success or {:error, reason} on failure.
   """
   def process_pages(gap_group_products_fetch_status, gap_pages, _folder_path) do
     total_products =
@@ -53,8 +53,8 @@ defmodule GroupDeals.Gap.GapApiProductsJsonProcessor do
       end)
 
     case total_products do
-      {:error, _reason} ->
-        :error
+      {:error, reason} ->
+        {:error, reason}
 
       {_updated_fetch, count} ->
         {:ok, count}

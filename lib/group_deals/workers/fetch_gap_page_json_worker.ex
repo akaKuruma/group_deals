@@ -41,13 +41,14 @@ defmodule GroupDeals.Workers.FetchGapPageJsonWorker do
             schedule_next_job(gap_group_products_fetch_status.id)
             :ok
 
-          :error ->
-            :error
+          {:error, reason} ->
+            {:error, reason}
         end
 
       {:error, changeset} ->
         Logger.error("Failed to update GapGroupProductsFetchStatus status: #{inspect(changeset)}")
         mark_as_failed(gap_group_products_fetch_status, "Failed to update status")
+        {:error, :status_update_failed}
     end
   end
 
